@@ -1,8 +1,6 @@
 #include "../includes/Server.hpp"
 #include "../includes/Validator.hpp"
 
-// 각 Class 마다의 책임 + 해야 하는 일...
-
 Server::Server(std::string port, std::string pass) : _pass(pass) {
     long long validatedPort;
 
@@ -15,7 +13,6 @@ Server::Server(std::string port, std::string pass) : _pass(pass) {
 }
 
 Server::~Server() {
-
 }
 
 void Server::settingHostIp() {
@@ -33,9 +30,7 @@ void Server::settingHostIp() {
     _host = "irc.localHost.net";
 }
 
-void Server::initializeServer() {    
-    // initializing...
-    // 1. 소켓 만들기
+void Server::initializeServer() {
     _socketFd = socket(AF_INET, SOCK_STREAM, 0);
     if (_socketFd == -1) {
         throw std::runtime_error("ERROR: Socket creation failed");
@@ -44,138 +39,77 @@ void Server::initializeServer() {
     _serverAddr.sin_family = AF_INET;
     _serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
     _serverAddr.sin_port = htons(_port);
-    std::cout << "Check 1.1" << std::endl;
-    // pushEvents
-    pushEvents(_newEventFdList, _socketFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
-    // 2. 소켓 옵션 설정
     int opt = 1;
     setsockopt(_socketFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-    // 3. 소켓 바인드(IP, Port)
     if (bind(_socketFd, (struct sockaddr*)&_serverAddr, sizeof(_serverAddr)) == -1) {
         throw std::runtime_error("ERROR: Socket bind failed");
     }
-    std::cout << "Check 1.2" << std::endl;
-    // 4. 소켓 리슨 -> 이제 받기 시작하도록
-    if (listen(_socketFd, 100) == -1)
+    if (listen(_socketFd, 100) == -1) {
         throw std::runtime_error("ERROR: Socket listen failed");
-    std::cout << "Check 1.3" << std::endl;
+    }
     _kqueueFd = kqueue();
-    std::cout << "Check 1.4" << std::endl;
-    // std::memset(&_changeList, 0, sizeof(_changeList));
+    pushEvents(_newEventFdList, _socketFd, EVFILT_READ, EV_ADD | EV_ENABLE);
     std::memset(&_kEventList, 0, sizeof(_kEventList));
-    std::cout << "Check 1.5" << std::endl;
-    // EV_SET(&_changeList[0], _socketFd, EVFILT_READ, EV_ADD, 0, 0, NULL);
-    // EV_SET(&_changeList[0], _socketFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
-    // EV_SET(&_newEventFdList[0], _socketFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
-    //EV_SET arguments : struct kevent *kevp, uintptr_t ident, short filter, u_short flags, u_int fflags, intptr_t data, void *udata
-    //
-    std::cout << "Check 1.6" << std::endl;
 
     _timeout->tv_sec = 3;
     _timeout->tv_nsec = 0;
 }
 
-// loop에서 master socket에 이벤트 검출 -> 새로 접속할 클라이언트가 있음! -> accept
-
 void Server::runServer() {
-    // 1. while loop + 
-    // server run flag 만들어서 flag가 0(오류가 발생되어 종료해야 하는 경우) 이면 while이 끝나도록?
-    // 2. kqueue에서 이벤트 검출
-    // 3. 이벤트 검출된 소켓이 master socket인지, client socket인지 구분
-    // 4. master socket이면 새로운 클라이언트 접속 -> addClient
-    // 5. client socket이면 메시지 수신 -> receiveMessage
-    // client socket인데 recv = 0 이면 -> 접속 종료 -> removeClient
-    // 이제 보낼 메세지 확인 : socket의 send buffer에 메세지가 있는지 확인 + 메세지를 보낼 수 있는지 확인.
-    // 6. client socket이면 메시지 송신 -> sendMessage
-    // 7. exception throw 된 거 찾았으면 server 종료??
+    int status = 1;
+    int eventCount = 0;
 
-
-
-    //struct timespec {
-    //    time_t tv_sec; /* seconds */
-    //    long   tv_nsec; /* nanoseconds */
-    //};
-
-
-    // EV_SET(&_ev, _socketFd, EVFILT_READ, EV_ADD, 0, 0, NULL);
-    int flag = 1; // flag를 
-    int newEvent;
-    while (flag)
-    {
-        std::cout << "Check 2.1" << std::endl;
-        std::cout << "_newEventFdList.size() : " << _newEventFdList.size() << std::endl;
-        newEvent = kevent(_kqueueFd, &_newEventFdList[0], _newEventFdList.size(), _kEventList, 15, _timeout);
-        _newEventFdList.clear();
-        // 여기서는 kevent를 사용하여 이벤트를 대기.
-
-        // changeList : 이벤트를 등록하거나 삭제할 때 사용하는 구조체 : EV_SET을 통해 등록
-        // EV_SET 으로 계속 들고다니면서 여기에 등록을 함.
-        // pollfds의 event
-
-        // nChanges : changeList에 등록된 이벤트의 개수
-        // eventList : 이벤트가 발생했을 때 정보를 담는 구조체
-
-        // nEvents : eventList에 등록된 이벤트의 개수
-        // timeout : 이벤트가 발생할 때까지 대기하는 시간
-        // 이벤트가 발생하면 발생한 이벤트의 개수를 반환하고, timeout이 지나면 0을 반환한다.
-        // 이벤트가 발생하지 않으면 -1을 반환하고 errno에 오류 코드를 저장한다.
-
-        if (newEvent == -1) {
-            throw std::runtime_error("ERROR: Kqueue event error");
+    std::cout << "Server loop started" << std::endl;
+    while (status) {
+        std::cout << "Waiting for events ..." << std::endl;
+        memset(&_kEventList, 0, sizeof(_kEventList));
+        eventCount = kevent(_kqueueFd, NULL, 0, _kEventList, 100, _timeout);
+        std::cout << "Event count: " << eventCount << std::endl;
+        if (eventCount < 0) {
+            std::cout << "Error in kevent" << std::endl;
+            return ;
         }
-        for (int i = 0; i < newEvent; i++) {
-            // 현재 이벤트의 정보
-            std::cout << "i : " << i << std::endl;
-            std::cout << "main socket fd : " << _socketFd << std::endl;
-            std::cout << "fd : " << _kEventList[i].ident << std::endl;
-            std::cout << "filter : " << _kEventList[i].filter << std::endl;
-            std::cout << "flags : " << _kEventList[i].flags << std::endl;
-
-            if (_kEventList[i].flags & EV_ERROR) {
-                std::cout << "ERROR: Master socket error" << std::endl;
+        for (int i = 0; i < eventCount; i++) {
+            if (_kEventList[i].flags & EV_EOF) {
+                std::cout << "Client disconnected" << std::endl;
+                pushEvents(_newEventFdList, _kEventList[i].ident, EVFILT_READ | EVFILT_WRITE, EV_DELETE);
+                close(_kEventList[i].ident);
+                continue;
             }
-            else if (_kEventList[i].flags & EVFILT_READ) {
-                std::cout << "Check 2.3.0" << std::endl;
-                if (_kEventList[i].ident == static_cast<uintptr_t>(_socketFd)) {
-                    std::cout << "Check 2.3.1" << std::endl;
-                    addClient();
-                    std::cout << "Check 2.3.2" << std::endl;
-                }
-                else if (_clientList.find(_kEventList[i].ident) != _clientList.end()) {
-                    std::cout << "Check 2.3.-1" << std::endl;
-                    receiveMessage(_kEventList[i].ident);
-                    std::cout << "Check 2.3.-2" << std::endl;
-                }
-                else {
-                    std::cout << "ERROR: Unknown socket error" << std::endl;
-                }
+            else if (_kEventList[i].ident == static_cast<uintptr_t>(_socketFd)) {
+                std::cout << "New client connection initiation request received" << std::endl;
+                addClient();
+                std::cout << "Client socket accepted" << std::endl;
             }
-            else if (_kEventList[i].flags & EVFILT_WRITE) {
-                if (_clientList.find(_kEventList[i].ident) != _clientList.end()) {
-                    sendMessage(*_clientList[_kEventList[i].ident]);
+            else if (_kEventList[i].filter == EVFILT_READ) {
+                char buffer[1024];
+                memset(buffer, 0, sizeof(buffer));
+                int bytes = recv(_kEventList[i].ident, buffer, sizeof(buffer), 0);
+                if (bytes < 0) {
+                    std::cout << "Error reading from client socket" << std::endl;
+                    return ;
                 }
-                else {
-                    std::cout << "ERROR: Unknown socket error" << std::endl;
+                else if (bytes == 0) {
+                    std::cout << "Client disconnected" << std::endl;
+                    close(_kEventList[i].ident);
+                    continue;
                 }
+                std::cout << "Message from client: " << buffer << std::endl;
+                send(_kEventList[i].ident, buffer, sizeof(buffer), 0);
             }
-            else if (_kEventList[i].flags & EVFILT_WRITE) {
-                std::cout << "Check 2.3.8" << std::endl;
-
-                sendMessage(*_clientList[_kEventList[i].ident]); // Server에서 eventList의 fd를 보고
-                std::cout << "Check 2.3.9" << std::endl;
+            else {
+                std::cout << "Unknown event" << std::endl;
             }
-            std::cout << "Check 2.3.10" << std::endl;
         }
-        std::cout << "Check 2.5" << std::endl;
-        sleep(2); 
-        std::cout << "end of while" << std::endl;
     }
+    return ;
 }
 
-void Server::pushEvents(EventList &eventFdList, uintptr_t fd, short filter, u_short flags, u_int fflags, intptr_t data, void *udata) {
+void Server::pushEvents(EventList &eventFdList, uintptr_t fd, short filter, u_short flags) {
     struct kevent event;
 
-    EV_SET(&event, fd, filter, flags, fflags, data, udata);
+    EV_SET(&event, fd, filter, flags, 0, 0, this);
+    kevent(_kqueueFd, &event, 1, NULL, 0, NULL);
     eventFdList.push_back(event);
 }
 
@@ -187,20 +121,14 @@ void Server::addClient() {
     std::memset(&clientAddr, 0, sizeof(clientAddr));
     clientAddrLen = sizeof(clientAddr);
 
-    // 새 클라이언트 연결 수락
     if ((clientFd = accept(_socketFd, (struct sockaddr*)&clientAddr, &clientAddrLen)) == -1)
         throw std::runtime_error("ERROR: Client accept error");
-    // 클라이언트 정보 저장
     _clientList.insert(std::make_pair(clientFd, new Client(clientFd)));
-    // 읽기 및 쓰기 이벤트 등록
-    pushEvents(_newEventFdList, clientFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
-    pushEvents(_newEventFdList, clientFd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL);
-    // 버퍼 초기화
+    pushEvents(_newEventFdList, clientFd, EVFILT_READ | EVFILT_WRITE, EV_ADD | EV_ENABLE);
     _clientList[clientFd]->resetReadBuffer();
     _clientList[clientFd]->resetWriteBuffer();
-    // 소켓 설정
     fcntl(clientFd, F_SETFL, O_NONBLOCK);
-    send (clientFd, "hello\n", 6, 0);
+    std::cout << "Client is connected" << std::endl;
 }
 
 
@@ -228,10 +156,6 @@ void Server::removeClient(int clientFd) {
 
 
 void Server::receiveMessage(int clientFd) {
-// 클라이언트 한테서 읽을 게 있다! socket에 있는 버퍼에 읽을 게 있으니까 
-// IRC 명세에 맞는 메세지가 들어왔으니 실행을 해 달라!
-    // Client *currentClient = _clientList[clientFd];
-
 // 1. Client 객체가 가지고 있는 socket에서 메세지를 받아서
 // 2. Client 객체가 가지고 있는 recv buffer + 현재 받은 메세지 -> Server의 recv buffer에 넣기
 // 3. Server의 recv buffer에서 메세지를 하나씩 빼서(CRLF, CR, LF 기준으로 자른다. 다른 whitespace는 구분자로 사용되어서는 안됨)
@@ -339,6 +263,7 @@ void Server::receiveMessage(int clientFd) {
 
             _clientList[clientFd]->setRecvBuffer(totalMessage.substr(pos + denominatorLength));
             command = totalMessage.substr(0, pos);
+            // MESSAGE::parsingMassage();
             // 이 커맨드 파싱하고 실행시키면 됨.
             // runCommand(command, clientObject);
             //++PARSING;
@@ -366,7 +291,7 @@ void Server::receiveMessage(int clientFd) {
 // 서버가 전체 클라이언트에게 같은 메세지를 보낼 때의 함수?
 // 
 void Server::sendMessage(Client &client) {
-   // Client 객체가 가지고 있는 socket에 메세지를 보내는 함수 
+   // Client 객체가 가지고 있는 socket에 메세지를 보내는 함수
 
     // 어차피 client에 보낼 메세지들은 이미 명령어 실행하면서 보냈겠지만
     // 만약 send 오류로 그 명령들이 client의 send buffer에 남아있는 경우가 있을 수 있음

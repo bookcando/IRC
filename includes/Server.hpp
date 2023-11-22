@@ -49,7 +49,7 @@ public:
     void sendMessage(int cliendFd, std::string message);
     void sendMessage(int cliendFd);
 
-    void pushEvents(EventList &eventFdList, uintptr_t fd, short filter, u_short flags, u_int fflags, intptr_t data, void *udata);
+    void pushEvents(EventList &eventFdList, uintptr_t fd, short filter, u_short flags);
     // struct kevent {
     //     uintptr_t       ident;          /*  identifier for this event */
     //     short           filter;         /*  filter for event */
