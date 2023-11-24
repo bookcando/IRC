@@ -8,11 +8,8 @@ int main(int argc, char **argv) {
     }
     try {
         Server server(argv[1], argv[2]);
-        std::cout << "Check 1" << std::endl;
         server.initializeServer();
-        std::cout << "Check 2" << std::endl;
         server.runServer();
-        std::cout << "Check 3" << std::endl;
     }
     catch (std::exception &e) {
         std::cout << e.what() << std::endl;

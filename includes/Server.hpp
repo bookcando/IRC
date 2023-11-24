@@ -65,9 +65,6 @@ public:
     // data : 필터에 따라 사용할 데이터
     // udata : 사용자 정의 데이터
     int getPort() const;
-
-    // static 
-
 };
 
 #endif

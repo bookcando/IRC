@@ -69,34 +69,42 @@ void Server::runServer() {
             std::cout << "Error in kevent" << std::endl;
             return ;
         }
+        // 새로운 이벤트가 발생한 경우
         for (int i = 0; i < eventCount; i++) {
-            if (_kEventList[i].flags & EV_EOF) {
-                std::cout << "Client disconnected" << std::endl;
+            // 클라이언트에서 접속을 끝내는 키워드를 넣을 경우 클라이언트를 삭제할 때 들어오는 경우
+            if (_kEventList[i].flags & EV_EOF) { std::cout << "Client disconnected" << std::endl;
                 pushEvents(_newEventFdList, _kEventList[i].ident, EVFILT_READ | EVFILT_WRITE, EV_DELETE);
                 close(_kEventList[i].ident);
                 continue;
             }
+            // 새로운 클라이언트가 접속한 경우
             else if (_kEventList[i].ident == static_cast<uintptr_t>(_socketFd)) {
                 std::cout << "New client connection initiation request received" << std::endl;
                 addClient();
                 std::cout << "Client socket accepted" << std::endl;
             }
+            // 클라이언트가 메세지를 보낸 경우
             else if (_kEventList[i].filter == EVFILT_READ) {
                 char buffer[1024];
                 memset(buffer, 0, sizeof(buffer));
                 int bytes = recv(_kEventList[i].ident, buffer, sizeof(buffer), 0);
+                // 이벤트를 받을 때 에러가 발생한 경우
                 if (bytes < 0) {
                     std::cout << "Error reading from client socket" << std::endl;
                     return ;
                 }
+                // 클라이언트가 접속을 끝내는 키워드를 넣은 경우
                 else if (bytes == 0) {
                     std::cout << "Client disconnected" << std::endl;
                     close(_kEventList[i].ident);
                     continue;
                 }
+                // 정상적으로 메세지를 받은 경우
+                receiveMessage(_kEventList[i].ident);
                 std::cout << "Message from client: " << buffer << std::endl;
-                send(_kEventList[i].ident, buffer, sizeof(buffer), 0);
+                // send(_kEventList[i].ident, buffer, sizeof(buffer), 0); // echo 서버인 경우 사용
             }
+            // 이상한 이벤트가 발생한 경우
             else {
                 std::cout << "Unknown event" << std::endl;
             }
@@ -124,7 +132,7 @@ void Server::addClient() {
     if ((clientFd = accept(_socketFd, (struct sockaddr*)&clientAddr, &clientAddrLen)) == -1)
         throw std::runtime_error("ERROR: Client accept error");
     _clientList.insert(std::make_pair(clientFd, new Client(clientFd)));
-    pushEvents(_newEventFdList, clientFd, EVFILT_READ | EVFILT_WRITE, EV_ADD | EV_ENABLE);
+    pushEvents(_newEventFdList, clientFd, EVFILT_READ | EVFILT_WRITE,  EV_ADD | EV_ENABLE);
     _clientList[clientFd]->resetReadBuffer();
     _clientList[clientFd]->resetWriteBuffer();
     fcntl(clientFd, F_SETFL, O_NONBLOCK);
@@ -180,16 +188,12 @@ void Server::receiveMessage(int clientFd) {
         // 중요한 오류처리 부분 : 함께 고민해봐요~
         // **
         /*
-
-
         recv의 return이 -1인 경우
         1. recv 에서 읽을 것이 없어서 -1 인 경우(신호는 들어왔지만 아직 메세지가 들어오지는 않았음) : 다시 읽기를 바람?
         2. recv 자체의 오류 : 다시 실행?
         이를 어떻게 구분하여야 하며, 다시 실행해야 하는가?
         recv에서 오류가 나면 지금까지 읽어온 부분은 어떻게 해야 하는가?
-
         */
-
     }
     else if (recvLength == 0) {
         // 접속 종료
@@ -208,8 +212,6 @@ void Server::receiveMessage(int clientFd) {
         totalMessage = recvBuffer;
         return ;
     }
-
-
     // 이제 totalMessage에서 메세지를 하나씩 빼서 command buffer에 넣기
     // 이 때, CRLF, CR, LF를 기준으로 자르기
     // 다른 whitespace는 구분자로 사용되어서는 안됨
@@ -263,7 +265,7 @@ void Server::receiveMessage(int clientFd) {
 
             _clientList[clientFd]->setRecvBuffer(totalMessage.substr(pos + denominatorLength));
             command = totalMessage.substr(0, pos);
-            // MESSAGE::parsingMassage();
+            Message::parseMassages();
             // 이 커맨드 파싱하고 실행시키면 됨.
             // runCommand(command, clientObject);
             //++PARSING;
@@ -277,8 +279,6 @@ void Server::receiveMessage(int clientFd) {
                 std::cout << "ERROR: send error in recvMessage" << std::endl;
             }
             //여기서 오류나서 send가 안되면 send 버퍼에 다 남아있는데 그거 나중에 언젠가는 비워줘야하니까!
-
-
         }
     }
 }
