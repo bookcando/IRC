@@ -148,7 +148,7 @@ void Server::runServer() {
             }
             if (cur.flags & EVFILT_READ) {
                 if (isServerEvent(cur.ident)) { // 읽기 이벤트가 서버 소켓과 관련된 것인지 확인
-					addClient(cur.ident); // 새 클라이언트 연결 요청 처리
+					addClient(); // 새 클라이언트 연결 요청 처리
 				}
 				if (this->containsCurrentEvent(cur.ident)) { // 현재 이벤트가 처리 목록에 있는지 확인
 					handleReadEvent(cur.ident, cur.data); // 클라이언트로부터의 데이터 읽기 처리
