@@ -1,116 +1,258 @@
 #include "../includes/Server.hpp"
 #include "../includes/Validator.hpp"
 
-Server::Server(std::string port, std::string pass) : _pass(pass) {
+/*
+    Server 클래스 생성자
+    1. 포트 검증 및 등록
+    2. 패스워드 검증 및 등록
+    3. 호스트 이름 및 IP 주소 설정
+    4. kqueue 이벤트 알림 시스템 초기화 (kqueue 인스턴스 생성 및 인스턴스에 대한 파일 디스크립터 반환)
+*/
+Server::Server(std::string port, std::string pass) {
     long long validatedPort;
 
+    // 포트 검증
     validatedPort = Validator::validatePort(port);
     _port = static_cast<int>(validatedPort);
+    // 패스워드 검증 및 등록
     Validator::validatePassword(pass);
+    _pass = pass;
+    // 호스트 이름 및 IP 주소 설정
     settingHostIp();
+    // kqueue 이벤트 알림 시스템 초기화 (kqueue 인스턴스 생성 및및 인스턴스에 대한 파일 디스크립터 반환)
     if ((_kqueueFd = kqueue()) == -1)
         throw std::runtime_error("ERROR: Kqueue creation failed");
 }
 
+/*
+    Server 클래스 소멸자
+    1. 클라이언트 리스트에 있는 클라이언트 객체 삭제
+    2. kqueue 인스턴스 삭제
+    3. 서버 소켓 파일 디스크립터 삭제
+*/
 Server::~Server() {
 }
 
+/*
+    서버의 호스트 이름 및 IP 주소 설정
+    1. 호스트 이름 가져오기
+    2. 호스트 이름에 맞는 호스트 정보 조회
+    3. 호스트 정보에서 호스트 주소를 가져와서 IP 주소로 변환 (IPv4)
+*/
 void Server::settingHostIp() {
     char hostName[1024];
     struct hostent *hostStruct;
 
+    // 호스트 이름 가져오기 (예. c4r6s5.42seoul.kr)
     if (gethostname(hostName, sizeof(hostName)) == -1)
         throw std::runtime_error("ERROR: Hostname error");
     else {
+        // 호스트 이름(hostName)에 맞는 호스트 정보 조회
+        // 반환되는 hostent 구조체(hostStruct)는 호스트 이름, 별칭, 주소 유형, 주소 길이, 주소 목록 등 정보 포함
         if (!(hostStruct = gethostbyname(hostName)))
             throw std::runtime_error("ERROR: Hostname error");
         else
+            // 호스트 정보에서 호스트 주소(hostStruct->h_addr_list[0])를 가져와서 IP 주소로 변환 (IPv4)
             _ip = inet_ntoa(*(struct in_addr*)hostStruct->h_addr_list[0]);
     }
-    _host = "irc.localHost.net";
+    _host = "irc.localHost.net"; // 추후 확인 필요
 }
 
+/*
+    서버 초기화
+    1. 서버 소켓 생성 및 각종 설정
+*/
+
 void Server::initializeServer() {
+    // 서버 소켓 생성 (AF_INET: IPv4, SOCK_STREAM: TCP, 0: 기본 프로토콜(이 경우 TCP))
     _socketFd = socket(AF_INET, SOCK_STREAM, 0);
     if (_socketFd == -1) {
         throw std::runtime_error("ERROR: Socket creation failed");
     }
+    // 서버 소켓 주소 설정
     memset(&_serverAddr, 0, sizeof(_serverAddr));
-    _serverAddr.sin_family = AF_INET;
-    _serverAddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    _serverAddr.sin_port = htons(_port);
-    int opt = 1;
-    setsockopt(_socketFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    _serverAddr.sin_family = AF_INET; // 주소체계 IPv4로 설정
+    _serverAddr.sin_addr.s_addr = htonl(INADDR_ANY); // INADDR_ANY로 연결된 모든 네트워크 인터페이스에서 연결 수락
+    _serverAddr.sin_port = htons(_port); // 서버 포트 _port로 설정
+    
+    /*
+        서버 소켓 옵션 설정:
+        SOL_SOCKET: 소켓 옵션 레벨
+        SO_REUSEADDR: 소켓 재사용 옵션
+        &isReuseAddr: 소켓 재사용 옵션 활성 여부
+        sizeof(isReuseAddr): 소켓 재사용 옵션 값의 크기
+    */
+    int isReuseAddr = 1;
+    setsockopt(_socketFd, SOL_SOCKET, SO_REUSEADDR, &isReuseAddr, sizeof(isReuseAddr));
+    
+    // 서버 소켓에 주소 설정
     if (bind(_socketFd, (struct sockaddr*)&_serverAddr, sizeof(_serverAddr)) == -1) {
         throw std::runtime_error("ERROR: Socket bind failed");
     }
+    // 서버 소켓을 passive 모드로 설정: 연결 요청 대기
     if (listen(_socketFd, 100) == -1) {
         throw std::runtime_error("ERROR: Socket listen failed");
     }
-    _kqueueFd = kqueue();
-    pushEvents(_newEventFdList, _socketFd, EVFILT_READ, EV_ADD | EV_ENABLE);
-    std::memset(&_kEventList, 0, sizeof(_kEventList));
+    // 서버 소켓 논블로킹 모드로 설정: 
+    // 만약 요청된 작업을 즉시 완료할 수 없는 경우, 시스템 호출은 대기하지 않고 즉시 에러 코드를 반환: 다른 작업을 수행하거나, 나중에 다시 시도할 수 있음
+    fcntl(_socketFd, F_SETFL, O_NONBLOCK);
 
-    _timeout->tv_sec = 3;
-    _timeout->tv_nsec = 0;
+    /*
+        새로운 클라이언트 연결을 위한 이벤트 등록:
+        EVFILT_READ: 읽기 가능한 데이터가 있는 경우 (새로운 연결 요청 감지)
+        EV_ADD: 이벤트 추가
+        EV_ENABLE: 이벤트 활성화
+    */
+    pushEvents(_newEventFdList, _socketFd, EVFILT_READ, EV_ADD | EV_ENABLE);
+
+    // 서버 가동 플래그 설정
+    _isRunning = true;
+
+    // 서버 시작 시간 설정
+    _startTime = time(NULL);
+
+    // --- 임시 타임아웃 설정 (추후 삭제) ---
+    // _timeout->tv_sec = 3;
+    // _timeout->tv_nsec = 0;
 }
 
+/*
+    (여기부터 코드 채워넣기 필요. 일단 에코서버 기준으로 되어있던 코드는 주석처리.
+    handleReadEvent 등 내부에서 사용되는 함수들 실제 구현 필요)
+    서버 동작부:
+    1. 새로운 이벤트가 발생할 때까지 이벤트 대기
+    2. 새로운 이벤트가 발생한 경우, 이벤트 처리
+    3. 새로운 이벤트 처리 끝난 후, 연결이 끊긴 클라이언트 처리
+*/
 void Server::runServer() {
-    int status = 1;
     int eventCount = 0;
 
     std::cout << "Server loop started" << std::endl;
-    while (status) {
+    while (_isRunning) {
         std::cout << "Waiting for events ..." << std::endl;
         memset(&_kEventList, 0, sizeof(_kEventList));
-        eventCount = kevent(_kqueueFd, NULL, 0, _kEventList, 100, _timeout);
-        std::cout << "Event count: " << eventCount << std::endl;
-        if (eventCount < 0) {
-            std::cout << "Error in kevent" << std::endl;
-            return ;
-        }
-        // 새로운 이벤트가 발생한 경우
+
+        eventCount = kevent(_kqueueFd, &_newEventFdList[0], _newEventFdList.size(), _kEventList, 100, NULL);
+        _newEventFdList.clear();
+
         for (int i = 0; i < eventCount; i++) {
-            // 클라이언트에서 접속을 끝내는 키워드를 넣을 경우 클라이언트를 삭제할 때 들어오는 경우
-            if (_kEventList[i].flags & EV_EOF) { std::cout << "Client disconnected" << std::endl;
-                pushEvents(_newEventFdList, _kEventList[i].ident, EVFILT_READ | EVFILT_WRITE, EV_DELETE);
-                close(_kEventList[i].ident);
-                continue;
-            }
-            // 새로운 클라이언트가 접속한 경우
-            else if (_kEventList[i].ident == static_cast<uintptr_t>(_socketFd)) {
-                std::cout << "New client connection initiation request received" << std::endl;
-                addClient();
-                std::cout << "Client socket accepted" << std::endl;
-            }
-            // 클라이언트가 메세지를 보낸 경우
-            else if (_kEventList[i].filter == EVFILT_READ) {
-                char buffer[1024];
-                memset(buffer, 0, sizeof(buffer));
-                int bytes = recv(_kEventList[i].ident, buffer, sizeof(buffer), 0);
-                // 이벤트를 받을 때 에러가 발생한 경우
-                if (bytes < 0) {
-                    std::cout << "Error reading from client socket" << std::endl;
-                    return ;
+            struct kevent cur = _kEventList[i];
+            if (cur.flags & EV_ERROR) { // 이벤트에 오류 플래그가 설정되어 있는지 확인
+                if (isServerEvent(cur.ident)) { // 오류 이벤트가 서버 소켓과 관련된 것인지 확인
+                    _isRunning = false; // 서버 이벤트인 경우 서버 자체의 오류이므로 서버 종료
+                    break; // 루프 종료
                 }
-                // 클라이언트가 접속을 끝내는 키워드를 넣은 경우
-                else if (bytes == 0) {
-                    std::cout << "Client disconnected" << std::endl;
-                    close(_kEventList[i].ident);
-                    continue;
+                else {
+                    deleteClient(cur.ident); // 오류 이벤트가 클라이언트와 관련된 것이면 해당 클라이언트 삭제
                 }
-                // 정상적으로 메세지를 받은 경우
-                receiveMessage(_kEventList[i].ident);
-                std::cout << "Message from client: " << buffer << std::endl;
-                // send(_kEventList[i].ident, buffer, sizeof(buffer), 0); // echo 서버인 경우 사용
             }
-            // 이상한 이벤트가 발생한 경우
-            else {
-                std::cout << "Unknown event" << std::endl;
+            if (cur.flags & EVFILT_READ) {
+                if (isServerEvent(cur.ident)) { // 읽기 이벤트가 서버 소켓과 관련된 것인지 확인
+					addClient(cur.ident); // 새 클라이언트 연결 요청 처리
+				}
+				if (this->containsCurrentEvent(cur.ident)) { // 현재 이벤트가 처리 목록에 있는지 확인
+					handleReadEvent(cur.ident, cur.data); // 클라이언트로부터의 데이터 읽기 처리
+				}
             }
+            if (cur.ident & EVFILT_WRITE) { // 쓰기 이벤트인지 확인
+				//std::cout << "EVFILT_WRITE" << std::endl;
+				if (this->containsCurrentEvent(cur.ident)) { // 현재 이벤트가 처리 목록에 있는지 확인
+					handleWriteEvent(cur.ident); // 클라이언트에 데이터 쓰기 처리
+				}
+			}
         }
+    	// 모든 새 이벤트에 대한 처리가 끝난 후, 연결이 끊긴 클라이언트를 처리
+        handleDisconnectedClients();
+
+        // // 추후 _timeout 삭제 후 NULL로 변경
+        // eventCount = kevent(_kqueueFd, NULL, 0, _kEventList, 100, _timeout);
+        // std::cout << "Event count: " << eventCount << std::endl;
+        // if (eventCount < 0) {
+        //     std::cout << "Error in kevent" << std::endl;
+        //     return ;
+        // }
+        // // 새로운 이벤트가 발생한 경우
+        // for (int i = 0; i < eventCount; i++) {
+        //     // 클라이언트에서 접속을 끝내는 키워드를 넣을 경우 클라이언트를 삭제할 때 들어오는 경우
+        //     if (_kEventList[i].flags & EV_EOF) { std::cout << "Client disconnected" << std::endl;
+        //         pushEvents(_newEventFdList, _kEventList[i].ident, EVFILT_READ | EVFILT_WRITE, EV_DELETE);
+        //         close(_kEventList[i].ident);
+        //         continue;
+        //     }
+        //     // 새로운 클라이언트가 접속한 경우
+        //     else if (_kEventList[i].ident == static_cast<uintptr_t>(_socketFd)) {
+        //         std::cout << "New client connection initiation request received" << std::endl;
+        //         addClient();
+        //         std::cout << "Client socket accepted" << std::endl;
+        //     }
+        //     // 클라이언트가 메세지를 보낸 경우
+        //     else if (_kEventList[i].filter == EVFILT_READ) {
+        //         char buffer[1024];
+        //         memset(buffer, 0, sizeof(buffer));
+        //         int bytes = recv(_kEventList[i].ident, buffer, sizeof(buffer), 0);
+        //         // 이벤트를 받을 때 에러가 발생한 경우
+        //         if (bytes < 0) {
+        //             std::cout << "Error reading from client socket" << std::endl;
+        //             return ;
+        //         }
+        //         // 클라이언트가 접속을 끝내는 키워드를 넣은 경우
+        //         else if (bytes == 0) {
+        //             std::cout << "Client disconnected" << std::endl;
+        //             close(_kEventList[i].ident);
+        //             continue;
+        //         }
+        //         // 정상적으로 메세지를 받은 경우
+        //         receiveMessage(_kEventList[i].ident);
+        //         std::cout << "Message from client: " << buffer << std::endl;
+        //         // send(_kEventList[i].ident, buffer, sizeof(buffer), 0); // echo 서버인 경우 사용
+        //     }
+        //     // 이상한 이벤트가 발생한 경우
+        //     else {
+        //         std::cout << "Unknown event" << std::endl;
+        //     }
+        // }
     }
-    return ;
+    //return ;
+}
+
+bool Server::isServerEvent(uintptr_t ident) {
+	return (ident == _socketFd);
+}
+
+void Server::deleteClient(int fd) {
+    // 만약 현재 작업 중인 클라이언트가 삭제될 클라이언트와 같다면, 작업 중인 클라이언트 참조를 NULL로 설정
+    if (_op == _clientList[fd])
+        _op = NULL;
+
+    // 클라이언트 객체 삭제
+    delete _clientList[fd];
+
+    // 해당 클라이언트의 읽기 및 쓰기 버퍼를 버퍼 관리 객체에서 제거
+    // hyojocho 가 만드는 중
+    // Buffer::eraseReadBuf(fd);
+    // Buffer::eraseSendBuf(fd);
+
+    // 클라이언트 목록에서 해당 클라이언트 제거
+    _clientList.erase(fd);
+
+    // 연결 해제된 클라이언트에 대한 정보를 로그로 출력
+    //Print::PrintComplexLineWithColor("[" + getStringTime(time(NULL)) + "] " + "Disconnected Client : ", fd, RED);
+}
+
+bool Server::containsCurrentEvent(uintptr_t ident) {
+	return (_clientList.find(ident) != _clientList.end());
+}
+
+void Server::handleReadEvent(int fd, intptr_t data) {
+    // 구현 추가
+}
+
+void Server::handleWriteEvent(int fd) {
+    // 구현 추가
+}
+
+void Server::handleDisconnectedClients() {
+    // 구현 추가
 }
 
 void Server::pushEvents(EventList &eventFdList, uintptr_t fd, short filter, u_short flags) {
@@ -265,7 +407,7 @@ void Server::receiveMessage(int clientFd) {
 
             _clientList[clientFd]->setRecvBuffer(totalMessage.substr(pos + denominatorLength));
             command = totalMessage.substr(0, pos);
-            Message::parseMassages();
+            //Message::parseMassages();
             // 이 커맨드 파싱하고 실행시키면 됨.
             // runCommand(command, clientObject);
             //++PARSING;
