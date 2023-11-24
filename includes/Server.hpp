@@ -11,6 +11,7 @@ private:
     int _kqueueFd;
     struct sockaddr_in _serverAddr;
     int _port;
+    Client *_op;
     std::string _pass;
     std::string _host;
     std::string _ip;
@@ -28,6 +29,9 @@ private:
     int _nEvents;
     struct timespec *_timeout;
 
+    bool _isRunning;
+    time_t _startTime;
+
 public:
     Server(std::string port, std::string pass);
     ~Server();
@@ -38,6 +42,7 @@ public:
     void runServer();
     
     void addClient();
+    void deleteClient(int fd);
     void removeClient(int clientFd);
 
     void receiveMessage();
@@ -48,6 +53,12 @@ public:
     void receiveMessage(int clientFd);
     void sendMessage(int cliendFd, std::string message);
     void sendMessage(int cliendFd);
+    bool isServerEvent(uintptr_t ident);
+
+    bool containsCurrentEvent(uintptr_t ident);
+    void handleReadEvent(int fd, intptr_t data);
+    void handleWriteEvent(int fd);
+    void handleDisconnectedClients();
 
     void pushEvents(EventList &eventFdList, uintptr_t fd, short filter, u_short flags);
     // struct kevent {
