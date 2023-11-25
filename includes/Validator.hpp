@@ -7,6 +7,7 @@ class Validator {
 public:
     static long long validatePort(const std::string& port);
     static void validatePassword(const std::string& password);
+    static bool validateMessage(const int fd, const intptr_t data);
 };
 
 #endif

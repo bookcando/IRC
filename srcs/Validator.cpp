@@ -1,4 +1,5 @@
 #include "../includes/Validator.hpp"
+#include "../includes/Buffer.hpp"
 
 long long Validator::validatePort(const std::string& port) {
     long long portNum = std::strtoll(port.c_str(), NULL, 10);
@@ -18,7 +19,15 @@ void Validator::validatePassword(const std::string& password) {
     if (password.find("\r") != std::string::npos || password.find("\n") != std::string::npos) {
         throw std::runtime_error("ERROR: Password cannot contain newlines");
     }
-//     if (password.find("\0") != std::string::npos) {
-//         throw std::runtime_error("ERROR: Password cannot contain null characters");
-//     }
+}
+
+bool Validator::validateMessage(const int fd, const intptr_t data) {
+    int byte = 0;
+
+    byte = Buffer::readMessage(fd, data);
+
+    if (byte <= 0) {
+        return false;
+    }
+    return true;
 }

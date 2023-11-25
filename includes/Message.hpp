@@ -2,14 +2,17 @@
 #define MESSAGE_HPP
 
 #include "./utils/Headers.hpp"
+#include "./utils/Containers.hpp"
 
-class Massage {
+class Message {
 private:
-    Massage();
+    Message();
+    static messageVector _commandElements;
 
 public:
-    ~Massage();
+    ~Message();
     static bool parseMessage(std::string message);
+    static void getMessage(int fd, std::string buffer, std::string host);
 };
 
 #endif

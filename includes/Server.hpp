@@ -57,7 +57,7 @@ public:
     bool isServerEvent(uintptr_t ident);
 
     bool containsCurrentEvent(uintptr_t ident);
-    void handleReadEvent(int fd, intptr_t data);
+    void handleReadEvent(int fd, intptr_t data, std::string host);
     void handleWriteEvent(int fd);
     void handleDisconnectedClients();
 
@@ -77,6 +77,7 @@ public:
     // data : 필터에 따라 사용할 데이터
     // udata : 사용자 정의 데이터
     int getPort() const;
+    std::string const& getHost() const;
 };
 
 #endif
