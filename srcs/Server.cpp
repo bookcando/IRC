@@ -103,7 +103,7 @@ void Server::initializeServer() {
         EV_ADD: 이벤트 추가
         EV_ENABLE: 이벤트 활성화
     */
-    pushEvents(_newEventFdList, _socketFd, EVFILT_READ, EV_ADD | EV_ENABLE);
+    pushEvents(_newEventFdList, _socketFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
 
     // 서버 가동 플래그 설정
     _isRunning = true;
@@ -157,7 +157,7 @@ void Server::runServer() {
             }
             if (cur.flags & EVFILT_READ) { // 읽기 이벤트인지 확인
                 if (isServerEvent(cur.ident)) { // 읽기 이벤트가 서버 소켓과 관련된 것인지 확인
-					addClient(); // 새 클라이언트 연결 요청 처리
+					addClient(cur.ident); // 새 클라이언트 연결 요청 처리
 				}
 				if (this->containsCurrentEvent(cur.ident)) { // 현재 이벤트가 처리 목록에 있는지 확인
 					handleReadEvent(cur.ident, cur.data); // 클라이언트로부터의 데이터 읽기 처리
@@ -188,9 +188,8 @@ void Server::deleteClient(int fd) {
     delete _clientList[fd];
 
     // 해당 클라이언트의 읽기 및 쓰기 버퍼를 버퍼 관리 객체에서 제거
-    // hyojocho 가 만드는 중
-    // Buffer::eraseReadBuf(fd);
-    // Buffer::eraseSendBuf(fd);
+    Buffer::eraseReadBuffer(fd);
+    Buffer::eraseWriteBuffer(fd);
 
     // 클라이언트 목록에서 해당 클라이언트 제거
     _clientList.erase(fd);
@@ -215,30 +214,41 @@ void Server::handleDisconnectedClients() {
     // 구현 추가
 }
 
-void Server::pushEvents(EventList &eventFdList, uintptr_t fd, short filter, u_short flags) {
+void Server::pushEvents(EventList &eventFdList, uintptr_t fd, int16_t filter, uint16_t flags, uint32_t fflags, intptr_t data, void* udata) {//short filter, u_short flags) {
     struct kevent event;
 
-    EV_SET(&event, fd, filter, flags, 0, 0, this);
+    EV_SET(&event, fd, filter, flags, fflags, data, udata);//0, 0, this);
     // kevent(_kqueueFd, &event, 1, NULL, 0, NULL);
     eventFdList.push_back(event);
 }
 
-void Server::addClient() {
-    int clientFd;
-    struct sockaddr_in clientAddr;
-    socklen_t clientAddrLen;
+void Server::addClient(int fd) {
+    int clientFd; // 새 클라이언트의 소켓
+    struct sockaddr_in clientAddr; // 클라이언트 주소 정보를 저장할 구조체
+    socklen_t clientSize; // 클라이언트 주소 정보의 크기
 
-    std::memset(&clientAddr, 0, sizeof(clientAddr));
-    clientAddrLen = sizeof(clientAddr);
+    clientSize = sizeof(clientAddr); // 클라이언트 주소 구조체의 크기를 설정
+    // 새 클라이언트 연결 수락
+    if ((clientFd = accept(fd, (struct sockaddr*)&clientAddr, &clientSize)) == -1)
+        throw std::runtime_error("Error : accept!()"); // 연결 수락 실패 시 예외 발생
 
-    if ((clientFd = accept(_socketFd, (struct sockaddr*)&clientAddr, &clientAddrLen)) == -1)
-        throw std::runtime_error("ERROR: Client accept error");
-    _clientList.insert(std::make_pair(clientFd, new Client(clientFd)));
-    pushEvents(_newEventFdList, clientFd, EVFILT_READ | EVFILT_WRITE,  EV_ADD | EV_ENABLE);
-    _clientList[clientFd]->resetReadBuffer();
-    _clientList[clientFd]->resetWriteBuffer();
+    // 클라이언트 소켓에 대한 읽기 이벤트를 이벤트 리스트에 추가
+    pushEvents(_newEventFdList, clientFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
+    // 클라이언트 소켓에 대한 쓰기 이벤트를 이벤트 리스트에 추가
+    pushEvents(_newEventFdList, clientFd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL);
+    
+    // 클라이언트 목록에 새 클라이언트 추가
+    _clientList.insert(std::make_pair(clientFd, new Client(clientFd, clientAddr.sin_addr)));
+    
+    // 클라이언트 소켓의 읽기 및 쓰기 버퍼 초기화
+    Buffer::resetReadBuffer(clientFd);
+    Buffer::resetWriteBuffer(clientFd);
+
+    // 클라이언트 소켓을 논블로킹 모드로 설정
     fcntl(clientFd, F_SETFL, O_NONBLOCK);
-    std::cout << "Client is connected" << std::endl;
+
+    // 새로 연결된 클라이언트에 대한 정보 출력
+    std::cout << "client connected : " << clientFd << std::endl; //Print::PrintComplexLineWithColor("[" + getStringTime(time(NULL)) + "] " + "Connected Client : ", clientFd, GREEN);
 }
 
 void Server::removeClient(int clientFd) {

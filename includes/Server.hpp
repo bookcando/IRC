@@ -4,6 +4,7 @@
 #include "./utils/Headers.hpp"
 #include "./utils/Containers.hpp"
 #include "Client.hpp"
+#include "Buffer.hpp"
 
 class Server {
 private:
@@ -41,7 +42,7 @@ public:
 
     void runServer();
     
-    void addClient();
+    void addClient(int fd);
     void deleteClient(int fd);
     void removeClient(int clientFd);
 
@@ -60,7 +61,7 @@ public:
     void handleWriteEvent(int fd);
     void handleDisconnectedClients();
 
-    void pushEvents(EventList &eventFdList, uintptr_t fd, short filter, u_short flags);
+    void pushEvents(EventList &eventFdList, uintptr_t fd, int16_t filter, uint16_t flags, uint32_t fflags, intptr_t data, void* udata);
     // struct kevent {
     //     uintptr_t       ident;          /*  identifier for this event */
     //     short           filter;         /*  filter for event */

@@ -2,7 +2,7 @@
 #include "../includes/utils/Containers.hpp"
 #include "../includes/Client.hpp"
 
-Client::Client(int clientFd) : _clientFd(clientFd), _nickname(""), _username(""), _realname(""), _recvBuffer(""), _sendBuffer("") {
+Client::Client(int clientFd, in_addr info) : _clientFd(clientFd), _nickname(""), _username(""), _realname(""), _recvBuffer(""), _sendBuffer("") {
 }
 
 Client::~Client() {

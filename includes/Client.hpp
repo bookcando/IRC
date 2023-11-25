@@ -22,7 +22,7 @@ private :
     // -> 그럼 send buffer에 저장한 후 이벤트 루프에서 send가 가능할 때까지 기다렸다가 보내도록 해야 함.
 
 public :
-    Client(int clientFd);
+    Client(int clientFd, in_addr info);
     ~Client();
 
     void resetReadBuffer();
