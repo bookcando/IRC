@@ -32,10 +32,14 @@ void Buffer::eraseWriteBuffer(int fd) {
     }
 }
 
+// Buffer 클래스의 메서드: 지정된 파일 기술자(fd)에 대한 읽기 버퍼를 반환합니다.
 std::string Buffer::getReadBuffer(int fd) {
+    // _bufferForRead 맵에서 해당 fd를 찾습니다.
     if (_bufferForRead.find(fd) != _bufferForRead.end()) {
+        // fd가 맵에 있으면, 해당 fd의 버퍼 내용을 반환합니다.
         return _bufferForRead[fd];
     } else {
+        // fd가 맵에 없으면, 빈 문자열을 반환합니다.
         return "";
     }
 }
@@ -64,17 +68,19 @@ void Buffer::setWriteBuffer(std::pair<int, std::string> val) {
     }
 }
 
+// Buffer 클래스의 메서드: 소켓에서 메시지 읽기
 int Buffer::readMessage(int fd, intptr_t data) {
-    char buffer[data + 1];
+    char buffer[data + 1]; // 버퍼를 동적으로 할당
     int byte;
 
-    memset(buffer, 0, sizeof(buffer));
-    byte = recv(fd, buffer, data, 0);
+    memset(buffer, 0, sizeof(buffer)); // 버퍼를 0으로 초기화
+    byte = recv(fd, buffer, data, 0); // 소켓에서 데이터를 읽어옴
+
     if (byte <= 0) {
-        return byte;
+        return byte; // 읽기 실패 또는 연결 종료의 경우, 읽은 바이트 수(또는 오류 코드) 반환
     }
-    _bufferForRead[fd] += buffer;
-    return byte;
+    _bufferForRead[fd] += buffer; // 읽은 데이터를 관련 fd의 읽기 버퍼에 추가
+    return byte; // 읽은 바이트 수 반환
 }
 
 int Buffer::sendMessage(int fd) {

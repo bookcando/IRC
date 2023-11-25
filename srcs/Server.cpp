@@ -140,6 +140,8 @@ void Server::runServer() {
             이후 발생한 이벤트 수를 반환하며, 이를 통해 프로그램은 어떤 이벤트가 발생했는지 파악 가능
         */
         eventCount = kevent(_kqueueFd, &_newEventFdList[0], _newEventFdList.size(), _kEventList, 100, NULL); // NULL: 블로킹 모드로 설정 (이벤트 발생까지 대기)
+        if (eventCount == -1)
+            throw std::runtime_error("ERROR: Kevent error"); // 이벤트 발생 실패 시 예외 발생 (이벤트 발생 실패 시는 없을 것 같음)
         // 이미 kqueue에 이벤트가 등록되었으므로, 이벤트 목록 비우기
         _newEventFdList.clear();
 
@@ -163,9 +165,9 @@ void Server::runServer() {
 				}
 				if (containsCurrentEvent(cur.ident)) { // 현재 이벤트가 처리 목록에 있는지 확인
 					handleReadEvent(cur.ident, cur.data, _host); // 클라이언트로부터의 데이터 읽기 처리
-				}
+				} // cur.ident: 이벤트가 발생한 파일 디스크립터, cur.data: 읽어온 데이터 크기, _host: 서버의 호스트 이름
             }
-            if (cur.ident & EVFILT_WRITE) { // 쓰기 이벤트인지 확인
+            if (cur.flags & EVFILT_WRITE) { // 쓰기 이벤트인지 확인 (-> cur.ident에서 수정함: 확인 필요)
 				//std::cout << "EVFILT_WRITE" << std::endl;
 				if (containsCurrentEvent(cur.ident)) { // 현재 이벤트가 처리 목록에 있는지 확인
 					handleWriteEvent(cur.ident); // 클라이언트에 데이터 쓰기 처리
@@ -204,19 +206,18 @@ bool Server::containsCurrentEvent(uintptr_t ident) {
 	return (_clientList.find(ident) != _clientList.end());
 }
 
+// Server 클래스의 메서드: 읽기 이벤트 처리
 void Server::handleReadEvent(int fd, intptr_t data, std::string host) {
     std::string buffer;
 
-    // 유효한 메시지인지 확인
-    if (Validator::validateMessage(fd, data) == false) {
-        deleteClient(fd);
-        return ;
+    // 메시지의 유효성을 확인합니다. 유효하지 않은 경우 클라이언트를 삭제합니다.
+    if (Validator::validateMessage(fd, data) == false) { 
+        deleteClient(fd); // 클라이언트 삭제
+        return; // 함수 종료
     }
-    buffer = Buffer::getReadBuffer(fd);
-    Buffer::resetReadBuffer(fd);
-    Message::getMessage(fd, buffer, host);
-
-    // Buffer::setReadBuffer();
+    buffer = Buffer::getReadBuffer(fd); // 클라이언트로부터 읽은 데이터를 가져옵니다.
+    Buffer::resetReadBuffer(fd); // 읽기 버퍼를 초기화합니다.
+    Message::parseMessageAndExecute(fd, buffer, host); // 메시지 처리 메서드를 호출합니다.
 }
 
 void Server::handleWriteEvent(int fd) {

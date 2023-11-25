@@ -21,13 +21,24 @@ void Validator::validatePassword(const std::string& password) {
     }
 }
 
+// Validator 클래스의 메서드: 메시지 유효성 검사
 bool Validator::validateMessage(const int fd, const intptr_t data) {
     int byte = 0;
 
-    byte = Buffer::readMessage(fd, data);
+    byte = Buffer::readMessage(fd, data); // 소켓으로부터 메시지를 읽습니다.
 
     if (byte <= 0) {
-        return false;
+        return false; // 읽은 데이터가 없거나 오류가 발생한 경우, 유효하지 않음
     }
-    return true;
+    return true; // 그 외의 경우, 유효함
+}
+
+bool Validator::checkForbiddenChar(std::string const& str, std::string const& forbidden_set) {
+    for (size_t i = 0; i < str.size(); i++) { // 문자열의 각 문자를 순회
+        for (size_t j = 0; j < forbidden_set.size(); j++) { // 금지된 문자 세트의 각 문자를 순회
+            if (str[i] == forbidden_set[j]) // 현재 문자열의 문자가 금지된 문자 중 하나와 일치하는지 확인
+                return true; // 일치하는 경우 true 반환
+        }
+    }
+    return false; // 금지된 문자가 문자열에 없는 경우 false 반환
 }

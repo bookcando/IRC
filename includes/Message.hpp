@@ -11,8 +11,8 @@ private:
 
 public:
     ~Message();
-    static bool parseMessage(std::string message);
-    static void getMessage(int fd, std::string buffer, std::string host);
+    static bool parseMessage(std::string& message);
+    static void parseMessageAndExecute(int fd, std::string buffer, std::string host);
 };
 
 #endif
