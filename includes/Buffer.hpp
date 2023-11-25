@@ -2,6 +2,7 @@
 #define BUFFER_HPP
 
 #include "./utils/Headers.hpp"
+#include "./utils/Containers.hpp"
 
 class Buffer {
 private:

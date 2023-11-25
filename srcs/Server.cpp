@@ -61,8 +61,8 @@ void Server::settingHostIp() {
 /*
     서버 초기화
     1. 서버 소켓 생성 및 각종 설정
+    2. 새로운 클라이언트 연결을 위한 이벤트 등록
 */
-
 void Server::initializeServer() {
     // 서버 소켓 생성 (AF_INET: IPv4, SOCK_STREAM: TCP, 0: 기본 프로토콜(이 경우 TCP))
     _socketFd = socket(AF_INET, SOCK_STREAM, 0);
@@ -76,7 +76,7 @@ void Server::initializeServer() {
     _serverAddr.sin_port = htons(_port); // 서버 포트 _port로 설정
     
     /*
-        서버 소켓 옵션 설정:
+        서버 소켓 옵션 설정
         SOL_SOCKET: 소켓 옵션 레벨
         SO_REUSEADDR: 소켓 재사용 옵션
         &isReuseAddr: 소켓 재사용 옵션 활성 여부
@@ -130,12 +130,21 @@ void Server::runServer() {
     std::cout << "Server loop started" << std::endl;
     while (_isRunning) {
         std::cout << "Waiting for events ..." << std::endl;
-        memset(&_kEventList, 0, sizeof(_kEventList));
+        //memset(&_kEventList, 0, sizeof(_kEventList)); // 필요한지 모르겠음
 
-        eventCount = kevent(_kqueueFd, &_newEventFdList[0], _newEventFdList.size(), _kEventList, 100, NULL);
+        /*
+            kevent 역할: 이벤트 변경 또는 감지
+            등록할 이벤트 목록(_newEventFdList)과 발생한 이벤트를 저장할 배열(_kEventList)을 인자로 받음. 이를 통해 이벤트를 kqueue에 추가 및 변경, 발생한 이벤트 감지
+            이후 발생한 이벤트 수를 반환하며, 이를 통해 프로그램은 어떤 이벤트가 발생했는지 파악 가능
+        */
+        eventCount = kevent(_kqueueFd, &_newEventFdList[0], _newEventFdList.size(), _kEventList, 100, NULL); // NULL: 블로킹 모드로 설정 (이벤트 발생까지 대기)
+        // 이미 kqueue에 이벤트가 등록되었으므로, 이벤트 목록 비우기
         _newEventFdList.clear();
 
+        // 발생한 이벤트 수 만큼 루프
         for (int i = 0; i < eventCount; i++) {
+            // _kEventList는 발생한 이벤트를 저장한 배열 (위에서 kevent 함수를 통해 이벤트를 감지하고 저장한 배열)
+            // cur: 현재 이벤트
             struct kevent cur = _kEventList[i];
             if (cur.flags & EV_ERROR) { // 이벤트에 오류 플래그가 설정되어 있는지 확인
                 if (isServerEvent(cur.ident)) { // 오류 이벤트가 서버 소켓과 관련된 것인지 확인
@@ -146,7 +155,7 @@ void Server::runServer() {
                     deleteClient(cur.ident); // 오류 이벤트가 클라이언트와 관련된 것이면 해당 클라이언트 삭제
                 }
             }
-            if (cur.flags & EVFILT_READ) {
+            if (cur.flags & EVFILT_READ) { // 읽기 이벤트인지 확인
                 if (isServerEvent(cur.ident)) { // 읽기 이벤트가 서버 소켓과 관련된 것인지 확인
 					addClient(); // 새 클라이언트 연결 요청 처리
 				}
@@ -163,60 +172,11 @@ void Server::runServer() {
         }
     	// 모든 새 이벤트에 대한 처리가 끝난 후, 연결이 끊긴 클라이언트를 처리
         handleDisconnectedClients();
-
-        // // 추후 _timeout 삭제 후 NULL로 변경
-        // eventCount = kevent(_kqueueFd, NULL, 0, _kEventList, 100, _timeout);
-        // std::cout << "Event count: " << eventCount << std::endl;
-        // if (eventCount < 0) {
-        //     std::cout << "Error in kevent" << std::endl;
-        //     return ;
-        // }
-        // // 새로운 이벤트가 발생한 경우
-        // for (int i = 0; i < eventCount; i++) {
-        //     // 클라이언트에서 접속을 끝내는 키워드를 넣을 경우 클라이언트를 삭제할 때 들어오는 경우
-        //     if (_kEventList[i].flags & EV_EOF) { std::cout << "Client disconnected" << std::endl;
-        //         pushEvents(_newEventFdList, _kEventList[i].ident, EVFILT_READ | EVFILT_WRITE, EV_DELETE);
-        //         close(_kEventList[i].ident);
-        //         continue;
-        //     }
-        //     // 새로운 클라이언트가 접속한 경우
-        //     else if (_kEventList[i].ident == static_cast<uintptr_t>(_socketFd)) {
-        //         std::cout << "New client connection initiation request received" << std::endl;
-        //         addClient();
-        //         std::cout << "Client socket accepted" << std::endl;
-        //     }
-        //     // 클라이언트가 메세지를 보낸 경우
-        //     else if (_kEventList[i].filter == EVFILT_READ) {
-        //         char buffer[1024];
-        //         memset(buffer, 0, sizeof(buffer));
-        //         int bytes = recv(_kEventList[i].ident, buffer, sizeof(buffer), 0);
-        //         // 이벤트를 받을 때 에러가 발생한 경우
-        //         if (bytes < 0) {
-        //             std::cout << "Error reading from client socket" << std::endl;
-        //             return ;
-        //         }
-        //         // 클라이언트가 접속을 끝내는 키워드를 넣은 경우
-        //         else if (bytes == 0) {
-        //             std::cout << "Client disconnected" << std::endl;
-        //             close(_kEventList[i].ident);
-        //             continue;
-        //         }
-        //         // 정상적으로 메세지를 받은 경우
-        //         receiveMessage(_kEventList[i].ident);
-        //         std::cout << "Message from client: " << buffer << std::endl;
-        //         // send(_kEventList[i].ident, buffer, sizeof(buffer), 0); // echo 서버인 경우 사용
-        //     }
-        //     // 이상한 이벤트가 발생한 경우
-        //     else {
-        //         std::cout << "Unknown event" << std::endl;
-        //     }
-        // }
     }
-    //return ;
 }
 
 bool Server::isServerEvent(uintptr_t ident) {
-	return (ident == _socketFd);
+	return (ident == (size_t)_socketFd); // size_t 형변환은 필요한지 확인 필요
 }
 
 void Server::deleteClient(int fd) {
@@ -259,7 +219,7 @@ void Server::pushEvents(EventList &eventFdList, uintptr_t fd, short filter, u_sh
     struct kevent event;
 
     EV_SET(&event, fd, filter, flags, 0, 0, this);
-    kevent(_kqueueFd, &event, 1, NULL, 0, NULL);
+    // kevent(_kqueueFd, &event, 1, NULL, 0, NULL);
     eventFdList.push_back(event);
 }
 
@@ -280,8 +240,6 @@ void Server::addClient() {
     fcntl(clientFd, F_SETFL, O_NONBLOCK);
     std::cout << "Client is connected" << std::endl;
 }
-
-
 
 void Server::removeClient(int clientFd) {
     Client *temp = _clientList[clientFd];
