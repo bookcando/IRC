@@ -4,6 +4,7 @@
 #include "../includes/Message.hpp"
 #include "../includes/Command.hpp"
 #include "../includes/utils/utils.hpp"
+#include "../includes/Lists.hpp"
 
 /*
     Server 클래스 생성자

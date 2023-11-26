@@ -7,20 +7,21 @@
 
 class List {
 private:
-	static ClientMap cltList;
-	static ChannelMap chlList;
+	static ClientMap clientList;
+	static ChannelMap channelList;
 public:
 	static bool addClientList(int fd, struct in_addr info);
-	static bool addChannelList(std::string name, Client* creator);
 	static bool deleteClientList(int fd);
-	static bool deleteChannelList(std::string name);
 	static void clearClientList();
-	static void clearChannelList();
 	static Client& findClient(int fd);
-	static Channel& findChannel(std::string name);
 	static bool hasClient(int fd);
-	static bool hasChannel(std::string name);
 	static ClientMap& getClientList();
+	
+	static bool addChannelList(std::string name, Client* creator);
+	static bool deleteChannelList(std::string name);
+	static void clearChannelList();
+	static Channel& findChannel(std::string name);
+	static bool hasChannel(std::string name);
 	static ChannelMap& getChannelList();
 };
 
