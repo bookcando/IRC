@@ -9,14 +9,14 @@ long long Validator::validatePort(const std::string& port) {
     return portNum;
 }
 
-void Validator::validatePassword(const std::string& password) {
-    if (password.length() < 8) {
+void Validator::validatePassword(const std::string& _password) {
+    if (_password.length() < 8) {
         throw std::runtime_error("ERROR: Password must be at least 8 characters long");
     }
-    if (password.find(" ") != std::string::npos) {
+    if (_password.find(" ") != std::string::npos) {
         throw std::runtime_error("ERROR: Password cannot contain spaces");
     }
-    if (password.find("\r") != std::string::npos || password.find("\n") != std::string::npos) {
+    if (_password.find("\r") != std::string::npos || _password.find("\n") != std::string::npos) {
         throw std::runtime_error("ERROR: Password cannot contain newlines");
     }
 }

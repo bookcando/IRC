@@ -13,6 +13,8 @@ private:
     struct sockaddr_in _serverAddr;
     int _port;
     Client *_op;
+    std::string _opName;
+    std::string _opPassword;
     std::string _pass;
     std::string _host;
     std::string _ip;
@@ -60,6 +62,8 @@ public:
     void handleReadEvent(int fd, intptr_t data, std::string host);
     void handleWriteEvent(int fd);
     void handleDisconnectedClients();
+
+    void executeCommand(int fd);
 
     void pushEvents(EventList &eventFdList, uintptr_t fd, int16_t filter, uint16_t flags, uint32_t fflags, intptr_t data, void* udata);
     // struct kevent {

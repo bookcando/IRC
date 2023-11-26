@@ -3,6 +3,7 @@
 #include "../includes/utils/Error.hpp"
 #include "../includes/utils/Headers.hpp"
 #include "../includes/Validator.hpp"
+#include "../includes/Server.hpp"
 
 Message::Message() {}
 
@@ -83,45 +84,8 @@ bool Message::parseMessage(std::string& originMessage) {
     return true;로 함수는 성공적으로 파싱을 완료하였음을 나타냅니다.
     최종적으로 _commandElements 리스트에는 ["QUIT", "Gone to have lunch"] 두 요소가 저장됩니다.
     */
-}  
+}
 
-// Message 클래스의 메서드: 네트워크로부터 받은 데이터를 처리하고 메시지를 파싱합니다.
-void Message::parseMessageAndExecute(int fd, std::string buffer, std::string host) {
-    std::string message;
-    size_t size = 0;
-    int cut;
-
-    // 무한 루프를 통해 버퍼 내의 모든 메시지를 처리합니다.
-    while (1) {
-        // 줄바꿈 문자("\r\n", "\r", "\n")를 찾아 메시지를 구분합니다.
-        if ((size = buffer.find("\r\n")) != std::string::npos) {
-            cut = size + 2; // "\r\n"을 포함하여 자릅니다.
-        } else if ((size = buffer.find("\r")) != std::string::npos || (size = buffer.find("\n")) != std::string::npos) {
-            cut = size + 1; // "\r" 또는 "\n"만 포함하여 자릅니다.
-        } else {
-            break; // 줄바꿈 문자가 없으면 루프를 종료합니다.
-        }
- 
-        /*
-        메시지 추출 예시: "메시지1\n메시지2\n메시지3\n" 입력 시,
-        
-        message = "메시지1\n"
-        buffer  = "메시지2\n메시지3\n"
-        */
-        message = buffer.substr(0, cut);
-        buffer = buffer.substr(cut, buffer.size()); // 나머지 버퍼를 업데이트합니다.
-
-        // 메시지 길이 제한 검사 (512 바이트)
-        if (message.size() > 512) {
-            Buffer::sendMessage(fd, Error::ERR_INPUTTOOLONG(host)); // 메시지가 너무 길면 오류 메시지를 전송합니다.
-            continue;
-        }
-
-        // 메시지를 파싱하고, 유효한 경우 명령을 실행합니다.
-        if (Message::parseMessage(message))
-            executeCommand(message);
-    }
-
-    // 남은 버퍼를 다시 설정합니다.
-    Buffer::setReadBuffer(std::make_pair(fd, buffer));
+messageVector const& Message::getMessage() {
+    return _commandElements;
 }

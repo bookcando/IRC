@@ -2,6 +2,8 @@
 #include "../includes/Validator.hpp"
 #include "../includes/Buffer.hpp"
 #include "../includes/Message.hpp"
+#include "../includes/Command.hpp"
+#include "../includes/utils/utils.hpp"
 
 /*
     Server 클래스 생성자
@@ -209,15 +211,51 @@ bool Server::containsCurrentEvent(uintptr_t ident) {
 // Server 클래스의 메서드: 읽기 이벤트 처리
 void Server::handleReadEvent(int fd, intptr_t data, std::string host) {
     std::string buffer;
+    std::string message;
+    size_t size = 0;
+    int cut;
 
     // 메시지의 유효성을 확인합니다. 유효하지 않은 경우 클라이언트를 삭제합니다.
     if (Validator::validateMessage(fd, data) == false) { 
         deleteClient(fd); // 클라이언트 삭제
         return; // 함수 종료
     }
+
     buffer = Buffer::getReadBuffer(fd); // 클라이언트로부터 읽은 데이터를 가져옵니다.
     Buffer::resetReadBuffer(fd); // 읽기 버퍼를 초기화합니다.
-    Message::parseMessageAndExecute(fd, buffer, host); // 메시지 처리 메서드를 호출합니다.
+
+    // 무한 루프를 통해 버퍼 내의 모든 메시지를 처리합니다.
+    while (1) {
+        // 줄바꿈 문자("\r\n", "\r", "\n")를 찾아 메시지를 구분합니다.
+        if ((size = buffer.find("\r\n")) != std::string::npos) {
+            cut = size + 2; // "\r\n"을 포함하여 자릅니다.
+        } else if ((size = buffer.find("\r")) != std::string::npos || (size = buffer.find("\n")) != std::string::npos) {
+            cut = size + 1; // "\r" 또는 "\n"만 포함하여 자릅니다.
+        } else {
+            break; // 줄바꿈 문자가 없으면 루프를 종료합니다.
+        }
+ 
+        /*
+        메시지 추출 예시: "메시지1\n메시지2\n메시지3\n" 입력 시,
+        
+        message = "메시지1\n"
+        buffer  = "메시지2\n메시지3\n"
+        */
+        message = buffer.substr(0, cut);
+        buffer = buffer.substr(cut, buffer.size()); // 나머지 버퍼를 업데이트합니다.
+
+        // 메시지 길이 제한 검사 (512 바이트)
+        if (message.size() > 512) {
+            Buffer::sendMessage(fd, Error::ERR_INPUTTOOLONG(host)); // 메시지가 너무 길면 오류 메시지를 전송합니다.
+            continue;
+        }
+
+        // 메시지를 파싱하고, 유효한 경우 명령을 실행합니다.
+        if (Message::parseMessage(message))
+            executeCommand(fd); // 명령 실행 
+    }
+    // 남은 버퍼를 다시 설정합니다.
+    Buffer::setReadBuffer(std::make_pair(fd, buffer));
 }
 
 void Server::handleWriteEvent(int fd) {
@@ -283,6 +321,78 @@ void Server::removeClient(int clientFd) {
     // Client 클래스가 생각할 것
     // Client 객체 삭제할 때 Client 객체가 가지고 있던 socket을 close
 }
+void Server::executeCommand(int fd) {
+    bool killFlag; // 클라이언트 삭제 여부를 결정하는 플래그
+    int killFd; // 삭제할 클라이언트의 파일 디스크립터
+
+    switch (Command::checkCommand()) { // 받은 명령어를 확인
+        case IS_PASS:
+            Command::pass(List::findClient(fd), _pass, _host); // PASS 명령어 처리
+            break;
+        case IS_NICK:
+            Command::nick(List::findClient(fd), _host); // NICK 명령어 처리
+            break;
+        case IS_USER:
+            Command::user(List::findClient(fd), _host, _ip, _startTime); // USER 명령어 처리
+            break;
+        case IS_PING:
+            Command::ping(List::findClient(fd), _host); // PING 명령어 처리
+            break;
+        case IS_PONG:
+            List::findClient(fd).setTime(); // PONG 명령어 처리, 클라이언트 활동 시간 업데이트
+            break;
+        case IS_MODE:
+            Command::mode(List::findClient(fd), _host); // MODE 명령어 처리
+            break;
+        case IS_JOIN:
+            Command::join(List::findClient(fd), _host); // JOIN 명령어 처리
+            break;
+        case IS_PART:
+            Command::part(List::findClient(fd), _host); // PART 명령어 처리
+            break;
+        case IS_KICK:
+            Command::kick(List::findClient(fd), _host); // KICK 명령어 처리
+            break;
+        case IS_INVITE:
+            Command::invite(List::findClient(fd), _host); // INVITE 명령어 처리
+            break;
+        case IS_TOPIC:
+            Command::_topic(List::findClient(fd), _host); // TOPIC 명령어 처리
+            break;
+        case IS_PRIVMSG:
+            Command::privmsg(List::findClient(fd), _host); // PRIVMSG 명령어 처리
+            break;
+        case IS_NOTICE:
+            Command::notice(List::findClient(fd)); // NOTICE 명령어 처리
+            break;
+        case IS_QUIT:
+            Command::quit(List::findClient(fd)); // QUIT 명령어 처리
+            deleteClient(fd); // 클라이언트 삭제
+            break;
+        case IS_OPER:
+            // OPER 명령어 처리, 운영자 권한 부여
+            if (Command::oper(List::findClient(fd), _opName, _opPassword, _host, _op != NULL ? true : false))
+                _op = &List::findClient(fd);
+            break;
+        case IS_KILL:
+            // KILL 명령어 처리
+            if (_op == NULL || fd != _op->getClientFd())
+                killFlag = false; // 운영자가 아니면 killFlag를 false로 설정
+            else
+                killFlag = true; // 운영자이면 killFlag를 true로 설정
+            if ((killFd = Command::kill(List::findClient(fd), _host, killFlag))) {
+                Command::quit(List::findClient(killFd)); // 특정 클라이언트 강제 종료
+                deleteClient(killFd); // 클라이언트 삭제
+            }
+            break;
+        case IS_NOT_ORDER:
+            // 알려지지 않은 명령어 처리
+            Buffer::sendMessage(fd, Error::ERR_UNKNOWNCOMMAND(_host, (Message::getMessage())[0]));
+            break;
+    };
+}
+
+
 void Server::receiveMessage(int clientFd) {
 
 }
