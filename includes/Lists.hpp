@@ -1,11 +1,11 @@
 #ifndef LISTS_HPP
 # define LISTS_HPP
 
-# include "utils.hpp"
+# include "./utils/utils.hpp"
 # include "../includes/utils/Containers.hpp"
 # include <sys/socket.h>
 
-class List {
+class Lists {
 private:
 	static ClientMap clientList;
 	static ChannelMap channelList;

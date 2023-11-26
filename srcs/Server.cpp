@@ -328,52 +328,52 @@ void Server::executeCommand(int fd) {
 
     switch (Command::checkCommand()) { // 받은 명령어를 확인
         case IS_PASS:
-            Command::pass(List::findClient(fd), _pass, _host); // PASS 명령어 처리
+            Command::pass(Lists::findClient(fd), _pass, _host); // PASS 명령어 처리
             break;
         case IS_NICK:
-            Command::nick(List::findClient(fd), _host); // NICK 명령어 처리
+            Command::nick(Lists::findClient(fd), _host); // NICK 명령어 처리
             break;
         case IS_USER:
-            Command::user(List::findClient(fd), _host, _ip, _startTime); // USER 명령어 처리
+            Command::user(Lists::findClient(fd), _host, _ip, _startTime); // USER 명령어 처리
             break;
         case IS_PING:
-            Command::ping(List::findClient(fd), _host); // PING 명령어 처리
+            Command::ping(Lists::findClient(fd), _host); // PING 명령어 처리
             break;
         case IS_PONG:
-            List::findClient(fd).setTime(); // PONG 명령어 처리, 클라이언트 활동 시간 업데이트
+            Lists::findClient(fd).setTime(); // PONG 명령어 처리, 클라이언트 활동 시간 업데이트
             break;
         case IS_MODE:
-            Command::mode(List::findClient(fd), _host); // MODE 명령어 처리
+            Command::mode(Lists::findClient(fd), _host); // MODE 명령어 처리
             break;
         case IS_JOIN:
-            Command::join(List::findClient(fd), _host); // JOIN 명령어 처리
+            Command::join(Lists::findClient(fd), _host); // JOIN 명령어 처리
             break;
         case IS_PART:
-            Command::part(List::findClient(fd), _host); // PART 명령어 처리
+            Command::part(Lists::findClient(fd), _host); // PART 명령어 처리
             break;
         case IS_KICK:
-            Command::kick(List::findClient(fd), _host); // KICK 명령어 처리
+            Command::kick(Lists::findClient(fd), _host); // KICK 명령어 처리
             break;
         case IS_INVITE:
-            Command::invite(List::findClient(fd), _host); // INVITE 명령어 처리
+            Command::invite(Lists::findClient(fd), _host); // INVITE 명령어 처리
             break;
         case IS_TOPIC:
-            Command::_topic(List::findClient(fd), _host); // TOPIC 명령어 처리
+            Command::_topic(Lists::findClient(fd), _host); // TOPIC 명령어 처리
             break;
         case IS_PRIVMSG:
-            Command::privmsg(List::findClient(fd), _host); // PRIVMSG 명령어 처리
+            Command::privmsg(Lists::findClient(fd), _host); // PRIVMSG 명령어 처리
             break;
         case IS_NOTICE:
-            Command::notice(List::findClient(fd)); // NOTICE 명령어 처리
+            Command::notice(Lists::findClient(fd)); // NOTICE 명령어 처리
             break;
         case IS_QUIT:
-            Command::quit(List::findClient(fd)); // QUIT 명령어 처리
+            Command::quit(Lists::findClient(fd)); // QUIT 명령어 처리
             deleteClient(fd); // 클라이언트 삭제
             break;
         case IS_OPER:
             // OPER 명령어 처리, 운영자 권한 부여
-            if (Command::oper(List::findClient(fd), _opName, _opPassword, _host, _op != NULL ? true : false))
-                _op = &List::findClient(fd);
+            if (Command::oper(Lists::findClient(fd), _opName, _opPassword, _host, _op != NULL ? true : false))
+                _op = &Lists::findClient(fd);
             break;
         case IS_KILL:
             // KILL 명령어 처리
@@ -381,8 +381,8 @@ void Server::executeCommand(int fd) {
                 killFlag = false; // 운영자가 아니면 killFlag를 false로 설정
             else
                 killFlag = true; // 운영자이면 killFlag를 true로 설정
-            if ((killFd = Command::kill(List::findClient(fd), _host, killFlag))) {
-                Command::quit(List::findClient(killFd)); // 특정 클라이언트 강제 종료
+            if ((killFd = Command::kill(Lists::findClient(fd), _host, killFlag))) {
+                Command::quit(Lists::findClient(killFd)); // 특정 클라이언트 강제 종료
                 deleteClient(killFd); // 클라이언트 삭제
             }
             break;
