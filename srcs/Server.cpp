@@ -358,7 +358,7 @@ void Server::executeCommand(int fd) {
             Command::invite(Lists::findClient(fd), _host); // INVITE 명령어 처리
             break;
         case IS_TOPIC:
-            Command::_topic(Lists::findClient(fd), _host); // TOPIC 명령어 처리
+            Command::topic(Lists::findClient(fd), _host); // TOPIC 명령어 처리
             break;
         case IS_PRIVMSG:
             Command::privmsg(Lists::findClient(fd), _host); // PRIVMSG 명령어 처리
