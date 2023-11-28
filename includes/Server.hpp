@@ -30,7 +30,7 @@ private:
     // int kevent(int kqueueFd, const struct kevent *changelist, int nchanges, struct kevent *eventlist, int nevents, const struct timespec *timeout);
     struct kevent _kEventList[100];
     int _nEvents;
-    struct timespec *_timeout;
+    struct timespec _timeout;
 
     bool _isRunning;
     time_t _startTime;

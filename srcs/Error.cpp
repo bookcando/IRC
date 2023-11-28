@@ -35,7 +35,13 @@ std::string const Error::ERR_NOTREGISTERED(std::string const& serverHost, std::s
 }
 
 std::string const Error::ERR_UNKNOWNCOMMAND(std::string const& serverHost, std::string const& command) {
-	return ":" + serverHost + " 421 " + command + " :Unknown Command" + suffix;
+	std::string msg = ":";
+	msg += serverHost;
+	msg += " 421 ";
+	msg += command;
+	msg += " :Unknown command";
+	msg += suffix;
+	return msg;
 }
 
 std::string const Error::ERR_NOORIGIN(std::string const& serverHost, std::string const& nick) {

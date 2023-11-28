@@ -118,8 +118,8 @@ void Server::initializeServer() {
     _startTime = time(NULL);
 
     // --- 임시 타임아웃 설정 (추후 삭제) ---
-    // _timeout->tv_sec = 3;
-    // _timeout->tv_nsec = 0;
+    _timeout.tv_sec = 0;
+    _timeout.tv_nsec = 500000000;
 }
 
 /*
@@ -132,7 +132,9 @@ void Server::initializeServer() {
 */
 void Server::runServer() {
     int eventCount = 0;
+    struct timespec time;
 
+    memset(&time, 0, sizeof(time));
     std::cout << "Server loop started" << std::endl;
     while (_isRunning) {
         std::cout << "Waiting for events ..." << std::endl;
@@ -145,7 +147,8 @@ void Server::runServer() {
         */
         // eventCount = kevent(_kqueueFd, &_newEventFdList[0], _newEventFdList.size(), _kEventList, 100, NULL); // NULL: 블로킹 모드로 설정 (이벤트 발생까지 대기)
         // _timeout
-        eventCount = kevent(_kqueueFd, NULL, 0, _kEventList, 100, NULL); // NULL: 블로킹 모드로 설정 (이벤트 발생까지 대기)
+        // eventCount = kevent(_kqueueFd, NULL, 0, _kEventList, 100, NULL); // NULL: 블로킹 모드로 설정 (이벤트 발생까지 대기)
+        eventCount = kevent(_kqueueFd, NULL, 0, _kEventList, 100, &_timeout); // NULL: 블로킹 모드로 설정 (이벤트 발생까지 대기)
 
         std::cout << "eventCount: " << eventCount << std::endl;
         if (eventCount == -1)
@@ -206,7 +209,7 @@ void Server::deleteClient(int fd) {
 
     // 클라이언트 객체 삭제
     // delete _clientList[fd];
-    delete &Lists::findClient(fd);
+    // delete &Lists::findClient(fd);
 
     // 해당 클라이언트의 읽기 및 쓰기 버퍼를 버퍼 관리 객체에서 제거
     Buffer::eraseReadBuffer(fd);
@@ -298,7 +301,7 @@ void Server::handleDisconnectedClients() {
     // 모든 클라이언트를 순회하며 타임아웃 여부를 검사합니다.
     for (ClientMap::const_iterator it = cltList.begin(); it != cltList.end(); it++) {
         // 클라이언트의 마지막 활동 시간으로부터 현재까지의 시간 차이가 120초(2분)를 초과하는 경우
-        if (cur - it->second->getTime() > 120)
+        if (cur - it->second->getTime() > 300)
             deleteList.push_back(it->second->getClientFd()); // 해당 클라이언트를 삭제 목록에 추가합니다.
     }
     // 삭제 목록의 각 클라이언트에 대해 연결 종료 처리를 수행합니다.
@@ -330,6 +333,8 @@ void Server::addClient(int fd) {
     pushEvents(_newEventFdList, clientFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
     // 클라이언트 소켓에 대한 쓰기 이벤트를 이벤트 리스트에 추가
     pushEvents(_newEventFdList, clientFd, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, 0, NULL);
+    // 쓰기 이벤트는 한 번만 검출되고 더 이상 검출되지 않음(DISPATCH = 삭제, EV_ONESHOT = 한 번만 검출)
+    // -> 쓰기 이벤트가 필요하면 다시 추가해야 함
     
     // 클라이언트 목록에 새 클라이언트 추가
     // _clientList.insert(std::make_pair(clientFd, new Client(clientFd, clientAddr.sin_addr)));
