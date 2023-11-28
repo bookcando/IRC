@@ -43,6 +43,8 @@ void Lists::clearClientList() {
 
 Client& Lists::findClient(int fd) {
     // 주어진 파일 기술자(fd)에 해당하는 클라이언트를 찾아 반환합니다.
+    if (clientList.find(fd) == clientList.end()) // 만약 주어진 파일 기술자에 해당하는 클라이언트가 없으면
+        throw std::out_of_range("Client not found"); // 예외를 발생시킵니다. (이는 서버의 오류입니다.
     return *clientList.find(fd)->second;
 }
 

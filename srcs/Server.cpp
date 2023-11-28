@@ -243,11 +243,9 @@ void Server::handleReadEvent(int fd, intptr_t data, std::string host) {
         return; // 함수 종료
     }
 
-    std::cout << "EVENT CHECK 2" << std::endl;
     buffer = Buffer::getReadBuffer(fd); // 클라이언트로부터 읽은 데이터를 가져옵니다.
     Buffer::resetReadBuffer(fd); // 읽기 버퍼를 초기화합니다.
 
-    std::cout << "EVENT CHECK 3" << std::endl;
     // 무한 루프를 통해 버퍼 내의 모든 메시지를 처리합니다.
     while (1) {
         // 줄바꿈 문자("\r\n", "\r", "\n")를 찾아 메시지를 구분합니다.
@@ -265,6 +263,7 @@ void Server::handleReadEvent(int fd, intptr_t data, std::string host) {
         message = "메시지1\n"
         buffer  = "메시지2\n메시지3\n"
         */
+
         message = buffer.substr(0, cut);
         buffer = buffer.substr(cut, buffer.size()); // 나머지 버퍼를 업데이트합니다.
         std::cout << "EVENT CHECK WHILE 2" << std::endl;
@@ -337,8 +336,10 @@ void Server::addClient(int fd) {
     // -> 쓰기 이벤트가 필요하면 다시 추가해야 함
     
     // 클라이언트 목록에 새 클라이언트 추가
+
     // _clientList.insert(std::make_pair(clientFd, new Client(clientFd, clientAddr.sin_addr)));
     Lists::addClientList(clientFd, clientAddr.sin_addr);
+
     
     // 클라이언트 소켓의 읽기 및 쓰기 버퍼 초기화
     Buffer::resetReadBuffer(clientFd);
@@ -374,6 +375,8 @@ void Server::removeClient(int clientFd) {
 void Server::executeCommand(int fd) {
     bool killFlag; // 클라이언트 삭제 여부를 결정하는 플래그
     int killFd; // 삭제할 클라이언트의 파일 디스크립터
+
+    std::cout << "executeCommand" << std::endl;
 
     switch (Command::checkCommand()) { // 받은 명령어를 확인
         case IS_PASS:
