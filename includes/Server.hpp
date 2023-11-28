@@ -23,7 +23,7 @@ private:
     std::string _recvBuffer;
     std::string _sendBuffer;
 
-    ClientMap _clientList;
+    // ClientMap _clientList;
 
     EventList _newEventFdList;
 

@@ -199,25 +199,30 @@ bool Server::isServerEvent(uintptr_t ident) {
 
 void Server::deleteClient(int fd) {
     // 만약 현재 작업 중인 클라이언트가 삭제될 클라이언트와 같다면, 작업 중인 클라이언트 참조를 NULL로 설정
-    if (_op == _clientList[fd])
+    // if (_op == _clientList[fd])
+        // _op = NULL;
+    if (_op == &Lists::findClient(fd))
         _op = NULL;
 
     // 클라이언트 객체 삭제
-    delete _clientList[fd];
+    // delete _clientList[fd];
+    delete &Lists::findClient(fd);
 
     // 해당 클라이언트의 읽기 및 쓰기 버퍼를 버퍼 관리 객체에서 제거
     Buffer::eraseReadBuffer(fd);
     Buffer::eraseWriteBuffer(fd);
 
     // 클라이언트 목록에서 해당 클라이언트 제거
-    _clientList.erase(fd);
+    // _clientList.erase(fd);
+    Lists::deleteClientList(fd);
 
     // 연결 해제된 클라이언트에 대한 정보를 로그로 출력
     //Print::PrintComplexLineWithColor("[" + getStringTime(time(NULL)) + "] " + "Disconnected Client : ", fd, RED);
 }
 
 bool Server::containsCurrentEvent(uintptr_t ident) {
-	return (_clientList.find(ident) != _clientList.end());
+	// return (_clientList.find(ident) != _clientList.end());
+    return (Lists::hasClient(ident));
 }
 
 // Server 클래스의 메서드: 읽기 이벤트 처리
@@ -327,7 +332,8 @@ void Server::addClient(int fd) {
     pushEvents(_newEventFdList, clientFd, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, 0, NULL);
     
     // 클라이언트 목록에 새 클라이언트 추가
-    _clientList.insert(std::make_pair(clientFd, new Client(clientFd, clientAddr.sin_addr)));
+    // _clientList.insert(std::make_pair(clientFd, new Client(clientFd, clientAddr.sin_addr)));
+    Lists::addClientList(clientFd, clientAddr.sin_addr);
     
     // 클라이언트 소켓의 읽기 및 쓰기 버퍼 초기화
     Buffer::resetReadBuffer(clientFd);
@@ -341,8 +347,10 @@ void Server::addClient(int fd) {
 }
 
 void Server::removeClient(int clientFd) {
-    Client *temp = _clientList[clientFd];
-    _clientList.erase(clientFd);
+    // Client *temp = _clientList[clientFd];
+    Client *temp = &Lists::findClient(clientFd);
+    // _clientList.erase(clientFd);
+    Lists::deleteClientList(clientFd);
     delete (temp);
     close (clientFd);
 
