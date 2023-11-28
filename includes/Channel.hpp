@@ -3,7 +3,8 @@
 
 #include "./utils/Headers.hpp"
 #include "./utils/Containers.hpp"
-#include "Client.hpp"
+// #include "Client.hpp"
+class Client;
 
 
 class Channel {

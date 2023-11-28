@@ -1,6 +1,7 @@
 #include "../includes/utils/Headers.hpp"
 #include "../includes/utils/Containers.hpp"
 #include "../includes/Client.hpp"
+#include "../includes/Channel.hpp"
 
 // Client 클래스의 생성자
 Client::Client(int clientFd, in_addr info)
@@ -17,8 +18,8 @@ Client::~Client() {
     // 채널 목록의 모든 채널에 대해 반복합니다.
     for (; it != _joinList.end(); it++) {
         // 현재 클라이언트가 채널의 오퍼레이터인 경우, 오퍼레이터를 NULL로 설정합니다.
-        if (it->second->getChannelOp() != NULL && it->second->getChannelOp()->getClientFd() == _clientFd)
-            it->second->setChannelOp(NULL);
+        if (it->second->getChannelOperator() != NULL && it->second->getChannelOperator()->getClientFd() == _clientFd)
+            it->second->setChannelOperator(NULL);
 
         // 채널의 클라이언트 목록과 초대 목록에서 현재 클라이언트를 제거합니다.
         it->second->deleteClientList(this);

@@ -2,7 +2,8 @@
 #define CONTAINERS_HPP
 
 #include "Headers.hpp"
-#include "../Channel.hpp"
+// #include "../Channel.hpp"
+class Channel;
 class Client;
 
 typedef std::map<int, Client*> ClientMap;

@@ -1,5 +1,5 @@
-#include "../../includes/Channel.hpp"
-#include "../../includes/Client.hpp"
+#include "../includes/Channel.hpp"
+#include "../includes/Client.hpp"
 
 // Channel 클래스의 생성자
 Channel::Channel(std::string channelName, Client* client) 

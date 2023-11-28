@@ -3,7 +3,8 @@
 
 #include "./utils/Headers.hpp"
 #include "./utils/Containers.hpp"
-#include "./Channel.hpp"
+// #include "./Channel.hpp"
+class Channel;
 #include "./Lists.hpp"
 
 // IRC 서버의 클라이언트. 여러 정보를 저장할 예정
