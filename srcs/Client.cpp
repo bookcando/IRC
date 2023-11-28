@@ -44,9 +44,21 @@ void Client::deleteJoinList(Channel* channel) {
 
 // 클라이언트가 채널에 참여하는 메서드
 int Client::joinChannel(Channel* channel, std::string const& key) {
-    // 채널 참여 조건을 확인하고, 조건을 만족하면 채널에 클라이언트를 추가
-    // 조건을 만족하지 않을 경우 오류 코드 반환
-    // ...
+	int channelMode = channel->getMode();
+
+	if (_joinList.size() == CHANNEL_LIMIT_PER_USER)
+		return TOOMANYCHANNELS;
+	if (channelMode & INVITE_CHANNEL && !channel->isClientInvite(this))
+		return INVITEONLYCHAN;
+	if (channelMode & USER_LIMIT_PER_CHANNEL && static_cast<size_t>(channel->getUserLimit()) < channel->getUserList().size())
+		return CHANNELISFULL;
+	if (channelMode & KEY_CHANNEL && key != channel->getKey())
+		return BADCHANNELKEY;
+	channel->addClientList(this);
+	if (channelMode & INVITE_CHANNEL)
+		channel->deleteInviteList(this);
+	this->addJoinList(channel);
+	return IS_SUCCESS;
 }
 
 // PASS 명령에 대한 연결 상태 설정

@@ -5,9 +5,7 @@
 #include "../includes/Validator.hpp"
 #include "../includes/Server.hpp"
 
-Message::Message() {}
-
-Message::~Message() {}
+messageVector Message::_commandElements;
 
 bool Message::parseMessage(std::string& originMessage) {
     _commandElements.clear(); // 명령 요소 목록 초기화

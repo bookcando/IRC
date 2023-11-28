@@ -81,7 +81,7 @@ void Server::initializeServer() {
     _serverAddr.sin_port = htons(_port); // 서버 포트 _port로 설정
     
     /*
-        서버 소켓 옵션 설정
+        서버 소켓 옵션 설정 
         SOL_SOCKET: 소켓 옵션 레벨
         SO_REUSEADDR: 소켓 재사용 옵션
         &isReuseAddr: 소켓 재사용 옵션 활성 여부
@@ -108,7 +108,7 @@ void Server::initializeServer() {
         EV_ADD: 이벤트 추가
         EV_ENABLE: 이벤트 활성화
     */
-    pushEvents(_newEventFdList, _socketFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
+    pushEvents(_newEventFdList, _socketFd, EVFILT_READ | EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL);
 
     // 서버 가동 플래그 설정
     _isRunning = true;
@@ -143,6 +143,7 @@ void Server::runServer() {
             이후 발생한 이벤트 수를 반환하며, 이를 통해 프로그램은 어떤 이벤트가 발생했는지 파악 가능
         */
         eventCount = kevent(_kqueueFd, &_newEventFdList[0], _newEventFdList.size(), _kEventList, 100, NULL); // NULL: 블로킹 모드로 설정 (이벤트 발생까지 대기)
+        // eventCount = kevent(_kqueueFd, NULL, 0, _kEventList, 100, NULL); // NULL: 블로킹 모드로 설정 (이벤트 발생까지 대기)
         if (eventCount == -1)
             throw std::runtime_error("ERROR: Kevent error"); // 이벤트 발생 실패 시 예외 발생 (이벤트 발생 실패 시는 없을 것 같음)
         // 이미 kqueue에 이벤트가 등록되었으므로, 이벤트 목록 비우기
@@ -155,23 +156,29 @@ void Server::runServer() {
             struct kevent cur = _kEventList[i];
             if (cur.flags & EV_ERROR) { // 이벤트에 오류 플래그가 설정되어 있는지 확인
                 if (isServerEvent(cur.ident)) { // 오류 이벤트가 서버 소켓과 관련된 것인지 확인
+                    std::cout << "Server error" << std::endl;
                     _isRunning = false; // 서버 이벤트인 경우 서버 자체의 오류이므로 서버 종료
                     break; // 루프 종료
                 }
                 else {
+                    std::cout << "Client error" << std::endl;
                     deleteClient(cur.ident); // 오류 이벤트가 클라이언트와 관련된 것이면 해당 클라이언트 삭제
+                    break ; // 루프 종료
                 }
             }
-            if (cur.flags & EVFILT_READ) { // 읽기 이벤트인지 확인
+            else if (cur.flags & EVFILT_READ) { // 읽기 이벤트인지 확인
+                std::cout << "EVFILT_READ" << std::endl;
                 if (isServerEvent(cur.ident)) { // 읽기 이벤트가 서버 소켓과 관련된 것인지 확인
+                    std::cout << "New client" << std::endl;
 					addClient(cur.ident); // 새 클라이언트 연결 요청 처리
 				}
-				if (containsCurrentEvent(cur.ident)) { // 현재 이벤트가 처리 목록에 있는지 확인
+				else if (containsCurrentEvent(cur.ident)) { // 현재 이벤트가 처리 목록에 있는지 확인
+                    std::cout << "New read event" << std::endl;
 					handleReadEvent(cur.ident, cur.data, _host); // 클라이언트로부터의 데이터 읽기 처리
 				} // cur.ident: 이벤트가 발생한 파일 디스크립터, cur.data: 읽어온 데이터 크기, _host: 서버의 호스트 이름
             }
-            if (cur.flags & EVFILT_WRITE) { // 쓰기 이벤트인지 확인 (-> cur.ident에서 수정함: 확인 필요)
-				//std::cout << "EVFILT_WRITE" << std::endl;
+            else if (cur.flags & EVFILT_WRITE) { // 쓰기 이벤트인지 확인 (-> cur.ident에서 수정함: 확인 필요)
+				std::cout << "EVFILT_WRITE" << std::endl;
 				if (containsCurrentEvent(cur.ident)) { // 현재 이벤트가 처리 목록에 있는지 확인
 					handleWriteEvent(cur.ident); // 클라이언트에 데이터 쓰기 처리
 				}
@@ -218,6 +225,7 @@ void Server::handleReadEvent(int fd, intptr_t data, std::string host) {
 
     // 메시지의 유효성을 확인합니다. 유효하지 않은 경우 클라이언트를 삭제합니다.
     if (Validator::validateMessage(fd, data) == false) { 
+        std::cout << "validateMessage:: invalid" << std::endl;
         deleteClient(fd); // 클라이언트 삭제
         return; // 함수 종료
     }
@@ -260,17 +268,33 @@ void Server::handleReadEvent(int fd, intptr_t data, std::string host) {
 }
 
 void Server::handleWriteEvent(int fd) {
-    // 구현 추가
+    Buffer::sendMessage(fd);
 }
 
 void Server::handleDisconnectedClients() {
-    // 구현 추가
+    time_t cur = time(NULL); // 현재 시간을 받아옵니다.
+    std::vector<int> deleteList; // 연결 종료할 클라이언트의 파일 기술자를 저장할 벡터를 선언합니다.
+    std::string timeout = "Quit :timeout\r\n"; // 타임아웃 메시지를 정의합니다.
+    ClientMap& cltList = Lists::getClientList(); // 클라이언트 목록을 가져옵니다.
+
+    Message::parseMessage(timeout); // 타임아웃 메시지를 파싱합니다.
+    // 모든 클라이언트를 순회하며 타임아웃 여부를 검사합니다.
+    for (ClientMap::const_iterator it = cltList.begin(); it != cltList.end(); it++) {
+        // 클라이언트의 마지막 활동 시간으로부터 현재까지의 시간 차이가 120초(2분)를 초과하는 경우
+        if (cur - it->second->getTime() > 120)
+            deleteList.push_back(it->second->getClientFd()); // 해당 클라이언트를 삭제 목록에 추가합니다.
+    }
+    // 삭제 목록의 각 클라이언트에 대해 연결 종료 처리를 수행합니다.
+    for (size_t i = 0; i < deleteList.size(); i++) {
+        Command::quit(*cltList[deleteList[i]]); // 클라이언트의 연결을 종료합니다.
+        deleteClient(deleteList[i]); // 클라이언트를 서버 목록에서 제거합니다.
+    }
 }
 
 void Server::pushEvents(EventList &eventFdList, uintptr_t fd, int16_t filter, uint16_t flags, uint32_t fflags, intptr_t data, void* udata) {//short filter, u_short flags) {
     struct kevent event;
 
-    EV_SET(&event, fd, filter, flags, fflags, data, udata);//0, 0, this);
+    EV_SET(&event, fd, filter, flags, fflags, data, udata);
     // kevent(_kqueueFd, &event, 1, NULL, 0, NULL);
     eventFdList.push_back(event);
 }
@@ -393,173 +417,6 @@ void Server::executeCommand(int fd) {
     };
 }
 
-
-void Server::receiveMessage(int clientFd) {
-
-}
-
 std::string const& Server::getHost() const {
     return _host;
 }
-
-// void Server::receiveMessage(int clientFd) {
-// // 1. Client 객체가 가지고 있는 socket에서 메세지를 받아서
-// // 2. Client 객체가 가지고 있는 recv buffer + 현재 받은 메세지 -> Server의 recv buffer에 넣기
-// // 3. Server의 recv buffer에서 메세지를 하나씩 빼서(CRLF, CR, LF 기준으로 자른다. 다른 whitespace는 구분자로 사용되어서는 안됨)
-// // 4. Server의 command buffer에 넣기
-// // 5. Server의 command parser에 넣고 돌리기 : 물론 커맨드에도 클라이언트 정보 필요하니까
-// // 클라이언트 정보도 같이 보내기 (클라이언트가 방장이 된다든지, 채널에 참여한다든지 등)
-// // 6. command 실행 중 -> send가 실패하면 send buffer에 넣기
-// // 그리고 Event에서 정보 전송 가능 event 감지 후 (한번만 감지하는 옵션) send buffer에서 메세지를 빼서 보내기
-// // 7. command 실행에서 send 되면 다음 command 실행 -> 3번으로 가세요.
-
-//     char recvBuffer[1024] = {0,};
-//     // -> recv 가 char 만 받아서 string 못받음!
-//     int recvLength = recv(clientFd, recvBuffer, 1020, 0); // recvBuffer는 Server의 recv buffer
-//     recvBuffer[recvLength] = '\0';
-//     std::cout << "recvBuffer : " << recvBuffer << std::endl;
-//     send(clientFd, recvBuffer, recvLength, 0);
-//     if (recvLength == -1) {
-//         // throw std::runtime_error("ERROR: Receive error");
-//         // 리시브가 실패하는 경우 : 다시 읽으려 노력해볼것인가? 이를 생각해야 함.
-
-//         // **
-//         // 중요한 오류처리 부분 : 함께 고민해봐요~
-//         // **
-//         /*
-//         recv의 return이 -1인 경우
-//         1. recv 에서 읽을 것이 없어서 -1 인 경우(신호는 들어왔지만 아직 메세지가 들어오지는 않았음) : 다시 읽기를 바람?
-//         2. recv 자체의 오류 : 다시 실행?
-//         이를 어떻게 구분하여야 하며, 다시 실행해야 하는가?
-//         recv에서 오류가 나면 지금까지 읽어온 부분은 어떻게 해야 하는가?
-//         */
-//     }
-//     else if (recvLength == 0) {
-//         // 접속 종료
-//         // removeClient(_clientList[clientFd]);
-//         // removeClient(_clientList[clientFd]);
-    
-//     }
-//     // std::string totalMessage = _clientList[clientFd].getRecvBuffer() + recvBuffer;
-//     recvBuffer[recvLength] = '\0';
-//     std::string totalMessage;
-//     if (_clientList[clientFd]->getRecvBuffer().size() > 0) {
-//         totalMessage = _clientList[clientFd]->getRecvBuffer() + recvBuffer;
-//         _clientList[clientFd]->setRecvBuffer("");
-//     }
-//     else {
-//         totalMessage = recvBuffer;
-//         return ;
-//     }
-//     // 이제 totalMessage에서 메세지를 하나씩 빼서 command buffer에 넣기
-//     // 이 때, CRLF, CR, LF를 기준으로 자르기
-//     // 다른 whitespace는 구분자로 사용되어서는 안됨
-//     // std::size_t crlfPos = totalMessage.find("\r\n"); // CRLF 가 있으면 CR이나 LF는 무조건 있음
-//     std::size_t crPos = totalMessage.find("\r");
-//     std::size_t lfPos = totalMessage.find("\n");
-//     std::size_t pos = 0;
-//     std::size_t denominatorLength = 0;
-//     std::string command;
-
-//     if (crPos == std::string::npos && lfPos == std::string::npos) {
-//         // CR, LF가 없는 경우 (그럼 당연히 CRLF는 없다)
-//         // 그냥 totalMessage를 command buffer에 넣고 끝낸다. 다음 recv/accept를 하러 가 보자구~
-//         _clientList[clientFd]->setRecvBuffer(totalMessage);
-//     }
-//     else {
-//         // CRLF, CR, LF가 있는 경우
-//         // CRLF, CR, LF 중 가장 먼저 나오는 것을 찾아서 그 전까지를 command buffer에 넣고
-//         // 나머지는 다시 totalMessage에 넣고 다시 찾기
-
-//         // 그래서 하나라도 npos가 아닌 경우,
-//         // crlfPos 는 cr이 없거나 lf가 없으면 당연히 없음
-//         while (crPos != std::string::npos || lfPos != std::string::npos) {
-
-//             if (crPos != std::string::npos && lfPos != std::string::npos) {
-//                 if (lfPos + 1 == crPos) { // CRLF인 경우
-//                     denominatorLength = 2;
-//                     pos = crPos;
-//                 }
-//                 else { // CRLF가 아닌경우 : CR 또는 LF만 있음
-//                     denominatorLength = 1;
-//                     pos = std::min(crPos, lfPos);
-//                 }
-//                 pos = std::min(crPos, lfPos);
-//             } // crlf cr lf
-//             else if (crPos != std::string::npos) {
-//                 denominatorLength = 1;
-//                 pos = crPos;
-//             } // cr
-//             else if (lfPos != std::string::npos) {
-//                 denominatorLength = 1;
-//                 pos = lfPos;
-//             } // lf
-//             //CRLF가 있는 경우에는 CR 과 LF 모두 당연히 있음
-
-//             // pos는 CRLF, CR, LF 중 가장 먼저 나오는 것의 위치
-//             // pos 전까지를 command buffer에 넣고
-//             // pos + denominatorLength 부터 totalMessage 끝까지를 다시 totalMessage에 넣고 나서...
-
-//             //그럼 다음 커맨드를 위한 준비도 완료 + 커맨드 파싱해서 실행하면 되겠다!
-
-//             _clientList[clientFd]->setRecvBuffer(totalMessage.substr(pos + denominatorLength));
-//             command = totalMessage.substr(0, pos);
-//             Message::parseMassages();
-//             // 이 커맨드 파싱하고 실행시키면 됨.
-//             // runCommand(command, clientObject);
-//             //++PARSING;
-//             //++RUN_COMMAND;
-//             //파싱안해~
-//             // dkham이 다 하자~
-//             //echo 부분
-//             int sendLength;
-//             sendLength = send(clientFd, (command + "/r/n").c_str(), (command + "/r/n").size(), 0);
-//             if (sendLength < 0) {
-//                 std::cout << "ERROR: send error in recvMessage" << std::endl;
-//             }
-//             //여기서 오류나서 send가 안되면 send 버퍼에 다 남아있는데 그거 나중에 언젠가는 비워줘야하니까!
-//         }
-//     }
-// }
-// //1. crlf가 있음 -> cr 도 lf 도 검출됨
-// //2-1. crlf가 없음 -> cr만 검출
-// //2-2. crlf가 없음 -> lf만 검출
-// //3. cr, lf가 없음 -> 메세지 버퍼에 집어넣기
-
-// // 서버가 하나의 클라이언트에게 메세지를 보내는 함수?
-// // 서버가 전체 클라이언트에게 같은 메세지를 보낼 때의 함수?
-// // 
-// void Server::sendMessage(Client &client) {
-//    // Client 객체가 가지고 있는 socket에 메세지를 보내는 함수
-
-//     // 어차피 client에 보낼 메세지들은 이미 명령어 실행하면서 보냈겠지만
-//     // 만약 send 오류로 그 명령들이 client의 send buffer에 남아있는 경우가 있을 수 있음
-//     // -> 그 때에만 사용될 함수임. : send buffer에 남아있는 메세지를 보내고 send buffer를 비워주는 함수.
-
-//     int sendLength = 0;
-//     // send buffer에 남아있는 메세지가 있는지 확인
-//     if (client.getSendBuffer().size()) {
-//         sendLength = send(client.getClientFd(), client.getSendBuffer().c_str(), client.getSendBuffer().size(), 0);
-//         if (sendLength == -1) {
-//             //send에서 다시 오류가 난 경우...
-//         }
-//         else {
-//             //send에서 sendLength만큼 잘 전달한 경우
-//             // 근데 sendLength와 sendBufferLength를 비교해서 전부 전달 되었는지 확인해야 하나??
-//             client.setSendBuffer("");
-//         }
-        
-//     }
-//     else {
-//         // 아무것도 하지 말자. 한 번 더 기다려!
-//         // write event가 없는데 쓸 수 있어서 뭐하니?
-//     }
-// }
-// // void Server::sendMessage(std::string message) {
-    
-// // }
-
-// int Server::getPort() const {
-//     return _port;
-// }
-

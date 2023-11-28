@@ -5,6 +5,7 @@
 #include "../../includes/utils/reply.hpp"
 #include "../../includes/Lists.hpp"
 #include "../../includes/Client.hpp"
+#include "../../includes/Channel.hpp"
 #include <iostream>
 #include <sstream>
 

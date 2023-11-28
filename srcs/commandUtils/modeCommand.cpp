@@ -5,6 +5,7 @@
 #include "../../includes/utils/reply.hpp"
 #include "../../includes/Lists.hpp"
 #include "../../includes/Client.hpp"
+#include "../../includes/Channel.hpp"
 #include <sstream>
 
 // chkNum 함수: 문자열이 숫자로만 이루어져 있는지 확인

@@ -8,8 +8,8 @@
 ChannelMap Lists::channelList; // 채널 정보를 저장하는 정적 맵을 선언합니다.
 ClientMap Lists::clientList; // 클라이언트 정보를 저장하는 정적 맵을 선언합니다.
 
-Lists::Lists() {} // List 클래스의 생성자입니다. 특별한 초기화 작업이 없습니다.
-Lists::~Lists() {} // List 클래스의 소멸자입니다. 특별한 정리 작업이 없습니다.
+// Lists::Lists() {} // List 클래스의 생성자입니다. 특별한 초기화 작업이 없습니다.
+// Lists::~Lists() {} // List 클래스의 소멸자입니다. 특별한 정리 작업이 없습니다.
 
 bool Lists::addClientList(int fd, in_addr info) {
     // 클라이언트 목록에 주어진 파일 기술자(fd)가 없으면 새 클라이언트를 추가합니다.
@@ -32,7 +32,8 @@ bool Lists::deleteClientList(int fd) {
 
 void Lists::clearClientList() {
     // 클라이언트 목록의 모든 엔트리를 순회하며 삭제합니다.
-    for (auto iter = clientList.begin(); iter != clientList.end(); ++iter) {
+    ClientMap::iterator iter = clientList.begin(); // 클라이언트 목록을 순회하기 위한 반복자를 초기화합니다.
+    for (iter = clientList.begin(); iter != clientList.end(); ++iter) {
         delete iter->second; // 각 클라이언트 객체를 메모리에서 해제합니다.
     }
     clientList.clear(); // 맵을 비웁니다.
@@ -74,7 +75,8 @@ bool Lists::deleteChannelList(std::string name) {
 
 void Lists::clearChannelList() {
     // 채널 목록의 모든 엔트리를 순회하며 삭제합니다.
-    for (auto iter = channelList.begin(); iter != channelList.end(); ++iter) {
+    ChannelMap::iterator iter = channelList.begin(); // 채널 목록을 순회하기 위한 반복자를 초기화합니다.
+    for (iter = channelList.begin(); iter != channelList.end(); ++iter) {
         delete iter->second; // 각 채널 객체를 메모리에서 해제합니다.
     }
     channelList.clear(); // 맵을 비웁니다.

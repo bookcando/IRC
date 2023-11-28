@@ -27,7 +27,7 @@ bool Validator::validateMessage(const int fd, const intptr_t data) {
 
     byte = Buffer::readMessage(fd, data); // 소켓으로부터 메시지를 읽습니다.
 
-    if (byte <= 0) {
+    if (byte == 0) {
         return false; // 읽은 데이터가 없거나 오류가 발생한 경우, 유효하지 않음
     }
     return true; // 그 외의 경우, 유효함

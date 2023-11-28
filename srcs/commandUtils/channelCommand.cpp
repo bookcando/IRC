@@ -6,6 +6,7 @@
 #include "../../includes/Lists.hpp"
 #include "../../includes/utils/Headers.hpp"
 #include "../../includes/Client.hpp"
+#include "../../includes/Channel.hpp"
 
 // 채널 이름이 유효한 형식인지 확인하는 함수
 static bool isChanName(std::string const& chanName) {

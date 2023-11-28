@@ -71,6 +71,7 @@ void Buffer::setWriteBuffer(std::pair<int, std::string> val) {
 // Buffer 클래스의 메서드: 소켓에서 메시지 읽기
 int Buffer::readMessage(int fd, intptr_t data) {
     char buffer[data + 1]; // 버퍼를 동적으로 할당
+    //minsulee : 이거 Variable Length Array인데 C++98에서 괜찮은지 모르겠어요.
     int byte;
 
     memset(buffer, 0, sizeof(buffer)); // 버퍼를 0으로 초기화

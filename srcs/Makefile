@@ -2,9 +2,10 @@ CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98
 TARGET = IRC
 SRCDIR = .
+UTILDIR = ./commandUtils
 OBJDIR = obj
 
-SRCS = $(wildcard $(SRCDIR)/*.cpp)
+SRCS = $(wildcard $(SRCDIR)/*.cpp $(UTILDIR)/*.cpp)
 OBJS = $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(SRCS))
 DEPS = $(OBJS:.o=.d)
 
