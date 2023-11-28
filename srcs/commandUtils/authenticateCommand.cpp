@@ -42,15 +42,30 @@ void Command::pass(Client& client, std::string const& password, std::string cons
     messageVector const& message = Message::getMessage();
 
     // PASS 명령어에 대한 유효성 검사 및 처리를 수행합니다.
-    if (message.size() != 2) {
-        Buffer::sendMessage(client.getClientFd(), Error::ERR_NEEDMOREPARAMS(serverHost, "PASS"));
-    } else if (client.getPassConnect() & IS_PASS) {
-        Buffer::sendMessage(client.getClientFd(), Error::ERR_ALREADYREGISTERED(serverHost));
-    } else if (message[1] != password) {
-        Buffer::sendMessage(client.getClientFd(), Error::ERR_PASSWDMISMATCH(serverHost));
-    } else {
-        client.setPassConnect(IS_PASS); // 클라이언트의 상태를 업데이트합니다.
+    std::cout << "Command::pass in" << std::endl;
+    // std::cout << "Command::pass inin" << std::endl;
+    try {
+
+        if (message.size() != 2) {
+            std::cout << "Command::pass in 1" << std::endl;
+            Buffer::sendMessage(client.getClientFd(), Error::ERR_NEEDMOREPARAMS(serverHost, "PASS"));
+        } else if (client.getPassConnect() & IS_PASS) {
+            std::cout << "Command::pass in 2" << std::endl;
+            Buffer::sendMessage(client.getClientFd(), Error::ERR_ALREADYREGISTERED(serverHost));
+        } else if (message[1] != password) {
+            std::cout << "Command::pass in 3" << std::endl;
+            Buffer::sendMessage(client.getClientFd(), Error::ERR_PASSWDMISMATCH(serverHost));
+        } else {
+            std::cout << "Command::pass in 4" << std::endl;
+            client.setPassConnect(IS_PASS); // 클라이언트의 상태를 업데이트합니다.
+        }
+        std::cout << "Command::pass in X" << std::endl;
     }
+    catch (std::exception& e) {
+        std::cout << "Command::pass in 5" << std::endl;
+        std::cout << e.what() << std::endl;
+    }
+    std::cout << "Command::pass out" << std::endl;
 }
 
 // NICK 명령어 처리 함수

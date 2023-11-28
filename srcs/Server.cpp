@@ -108,7 +108,8 @@ void Server::initializeServer() {
         EV_ADD: 이벤트 추가
         EV_ENABLE: 이벤트 활성화
     */
-    pushEvents(_newEventFdList, _socketFd, EVFILT_READ | EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL);
+    pushEvents(_newEventFdList, _socketFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
+    pushEvents(_newEventFdList, _socketFd, EVFILT_WRITE , EV_ADD | EV_ENABLE, 0, 0, NULL);
 
     // 서버 가동 플래그 설정
     _isRunning = true;
@@ -142,8 +143,11 @@ void Server::runServer() {
             등록할 이벤트 목록(_newEventFdList)과 발생한 이벤트를 저장할 배열(_kEventList)을 인자로 받음. 이를 통해 이벤트를 kqueue에 추가 및 변경, 발생한 이벤트 감지
             이후 발생한 이벤트 수를 반환하며, 이를 통해 프로그램은 어떤 이벤트가 발생했는지 파악 가능
         */
-        eventCount = kevent(_kqueueFd, &_newEventFdList[0], _newEventFdList.size(), _kEventList, 100, NULL); // NULL: 블로킹 모드로 설정 (이벤트 발생까지 대기)
-        // eventCount = kevent(_kqueueFd, NULL, 0, _kEventList, 100, NULL); // NULL: 블로킹 모드로 설정 (이벤트 발생까지 대기)
+        // eventCount = kevent(_kqueueFd, &_newEventFdList[0], _newEventFdList.size(), _kEventList, 100, NULL); // NULL: 블로킹 모드로 설정 (이벤트 발생까지 대기)
+        // _timeout
+        eventCount = kevent(_kqueueFd, NULL, 0, _kEventList, 100, NULL); // NULL: 블로킹 모드로 설정 (이벤트 발생까지 대기)
+
+        std::cout << "eventCount: " << eventCount << std::endl;
         if (eventCount == -1)
             throw std::runtime_error("ERROR: Kevent error"); // 이벤트 발생 실패 시 예외 발생 (이벤트 발생 실패 시는 없을 것 같음)
         // 이미 kqueue에 이벤트가 등록되었으므로, 이벤트 목록 비우기
@@ -223,6 +227,7 @@ void Server::handleReadEvent(int fd, intptr_t data, std::string host) {
     size_t size = 0;
     int cut;
 
+    std::cout << "EVENT CHECK 1" << std::endl;
     // 메시지의 유효성을 확인합니다. 유효하지 않은 경우 클라이언트를 삭제합니다.
     if (Validator::validateMessage(fd, data) == false) { 
         std::cout << "validateMessage:: invalid" << std::endl;
@@ -230,9 +235,11 @@ void Server::handleReadEvent(int fd, intptr_t data, std::string host) {
         return; // 함수 종료
     }
 
+    std::cout << "EVENT CHECK 2" << std::endl;
     buffer = Buffer::getReadBuffer(fd); // 클라이언트로부터 읽은 데이터를 가져옵니다.
     Buffer::resetReadBuffer(fd); // 읽기 버퍼를 초기화합니다.
 
+    std::cout << "EVENT CHECK 3" << std::endl;
     // 무한 루프를 통해 버퍼 내의 모든 메시지를 처리합니다.
     while (1) {
         // 줄바꿈 문자("\r\n", "\r", "\n")를 찾아 메시지를 구분합니다.
@@ -243,7 +250,7 @@ void Server::handleReadEvent(int fd, intptr_t data, std::string host) {
         } else {
             break; // 줄바꿈 문자가 없으면 루프를 종료합니다.
         }
- 
+        std::cout << "EVENT CHECK WHILE 1" << std::endl;
         /*
         메시지 추출 예시: "메시지1\n메시지2\n메시지3\n" 입력 시,
         
@@ -252,18 +259,23 @@ void Server::handleReadEvent(int fd, intptr_t data, std::string host) {
         */
         message = buffer.substr(0, cut);
         buffer = buffer.substr(cut, buffer.size()); // 나머지 버퍼를 업데이트합니다.
+        std::cout << "EVENT CHECK WHILE 2" << std::endl;
 
         // 메시지 길이 제한 검사 (512 바이트)
         if (message.size() > 512) {
             Buffer::sendMessage(fd, Error::ERR_INPUTTOOLONG(host)); // 메시지가 너무 길면 오류 메시지를 전송합니다.
             continue;
         }
+        std::cout << "EVENT CHECK WHILE 3" << std::endl;
 
         // 메시지를 파싱하고, 유효한 경우 명령을 실행합니다.
-        if (Message::parseMessage(message))
+        if (Message::parseMessage(message)) {
+            std::cout << "EVENT CHECK WHILE 3.if" << std::endl;
             executeCommand(fd); // 명령 실행 
+        }
     }
     // 남은 버퍼를 다시 설정합니다.
+    std::cout << "EVENT CHECK 4" << std::endl;
     Buffer::setReadBuffer(std::make_pair(fd, buffer));
 }
 
@@ -295,7 +307,7 @@ void Server::pushEvents(EventList &eventFdList, uintptr_t fd, int16_t filter, ui
     struct kevent event;
 
     EV_SET(&event, fd, filter, flags, fflags, data, udata);
-    // kevent(_kqueueFd, &event, 1, NULL, 0, NULL);
+    kevent(_kqueueFd, &event, 1, NULL, 0, NULL);
     eventFdList.push_back(event);
 }
 
@@ -312,7 +324,7 @@ void Server::addClient(int fd) {
     // 클라이언트 소켓에 대한 읽기 이벤트를 이벤트 리스트에 추가
     pushEvents(_newEventFdList, clientFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
     // 클라이언트 소켓에 대한 쓰기 이벤트를 이벤트 리스트에 추가
-    pushEvents(_newEventFdList, clientFd, EVFILT_WRITE, EV_ADD | EV_ENABLE, 0, 0, NULL);
+    pushEvents(_newEventFdList, clientFd, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, 0, NULL);
     
     // 클라이언트 목록에 새 클라이언트 추가
     _clientList.insert(std::make_pair(clientFd, new Client(clientFd, clientAddr.sin_addr)));
