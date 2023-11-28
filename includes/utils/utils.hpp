@@ -75,4 +75,6 @@ std::string getStringTime(time_t const& time);
 
 // 메세지에 금지된 문자가 있는 지 확인
 bool chkForbiddenChar(std::string const& str, std::string const& forbidden_set);
+
+
 #endif

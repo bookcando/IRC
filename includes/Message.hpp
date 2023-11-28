@@ -6,11 +6,9 @@
 
 class Message {
 private:
-    Message();
     static messageVector _commandElements;
 
 public:
-    ~Message();
     static bool parseMessage(std::string& message);
     static void parseMessageAndExecute(int fd, std::string buffer, std::string host);
     static messageVector const& getMessage();
