@@ -8,6 +8,8 @@
 ChannelMap Lists::channelList; // 채널 정보를 저장하는 정적 맵을 선언합니다.
 ClientMap Lists::clientList; // 클라이언트 정보를 저장하는 정적 맵을 선언합니다.
 
+// -> 클라이언트를 저장하는 클라이언트리스트 라는 GLOBAL 변수가 이미 존재함 -> 서버에 만들어서는 안됨.
+
 // Lists::Lists() {} // List 클래스의 생성자입니다. 특별한 초기화 작업이 없습니다.
 // Lists::~Lists() {} // List 클래스의 소멸자입니다. 특별한 정리 작업이 없습니다.
 

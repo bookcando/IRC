@@ -85,7 +85,7 @@ int Buffer::readMessage(int fd, intptr_t data) {
 }
 
 int Buffer::sendMessage(int fd) {
-    int byte;
+    int byte = 0;
 
     std::string message = _bufferForWrite[fd];
     byte = send(fd, message.c_str(), message.length(), 0);
@@ -100,7 +100,7 @@ int Buffer::sendMessage(int fd) {
 }
 
 int Buffer::sendMessage(int fd, std::string message) {
-    int byte;
+    int byte = 0;
 
     byte = send(fd, message.c_str(), message.length(), 0);
     if (byte == -1) {

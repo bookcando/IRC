@@ -43,6 +43,7 @@ void Command::pass(Client& client, std::string const& password, std::string cons
 
     std::cout << "PASS: function1" << std::endl;
     // PASS 명령어에 대한 유효성 검사 및 처리를 수행합니다.
+
     if (message.size() != 2) {
         Buffer::sendMessage(client.getClientFd(), Error::ERR_NEEDMOREPARAMS(serverHost, "PASS"));
         std::cout << "PASS: function2" << message[1] << std::endl;
