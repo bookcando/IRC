@@ -41,23 +41,16 @@ void Command::motd(Client& client, std::string const& serverHost) {
 void Command::pass(Client& client, std::string const& password, std::string const& serverHost) {
     messageVector const& message = Message::getMessage();
 
-    std::cout << "PASS: function1" << std::endl;
     // PASS 명령어에 대한 유효성 검사 및 처리를 수행합니다.
-
     if (message.size() != 2) {
         Buffer::sendMessage(client.getClientFd(), Error::ERR_NEEDMOREPARAMS(serverHost, "PASS"));
-        std::cout << "PASS: function2" << message[1] << std::endl;
     } else if (client.getPassConnect() & IS_PASS) {
         Buffer::sendMessage(client.getClientFd(), Error::ERR_ALREADYREGISTERED(serverHost));
-        std::cout << "PASS: function3" << message[1] << std::endl;
     } else if (message[1] != password) {
         Buffer::sendMessage(client.getClientFd(), Error::ERR_PASSWDMISMATCH(serverHost));
-        std::cout << "PASS: function4" << message[1] << std::endl;
     } else {
-        std::cout << "PASS: function5" << message[1] << std::endl;
         client.setPassConnect(IS_PASS); // 클라이언트의 상태를 업데이트합니다.
     }
-    std::cout << "PASS: function6" << std::endl;
 }
 
 // NICK 명령어 처리 함수
