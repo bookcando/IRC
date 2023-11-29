@@ -25,14 +25,10 @@ public :
     Client(int clientFd, in_addr info);
     ~Client();
 
-    void resetReadBuffer();
-    void resetWriteBuffer();
-
 	void setPassConnect(int flag);
     void setNickname(std::string nickname);
     void setRealname(std::string realname);
     void setHost(std::string host);
-    void setClientFd(int clientFd);
     void setUsername(std::string username);
     void setServer(std::string server);
     void setTime();
