@@ -36,6 +36,10 @@ Server::Server(std::string port, std::string pass) {
     3. 서버 소켓 파일 디스크립터 삭제
 */
 Server::~Server() {
+	Lists::clearClientList();
+	Lists::clearChannelList();
+    close(_socketFd);
+    close(_kqueueFd);
 }
 
 /*
@@ -109,7 +113,7 @@ void Server::initializeServer() {
         EV_ENABLE: 이벤트 활성화
     */
     pushEvents(_newEventFdList, _socketFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
-    
+
     // 서버 가동 플래그 설정
     _isRunning = true;
 
@@ -230,7 +234,6 @@ void Server::handleReadEvent(int fd, intptr_t data, std::string host) {
     size_t size = 0;
     int cut;
 
-    std::cout << "EVENT CHECK 1" << std::endl;
     // 메시지의 유효성을 확인합니다. 유효하지 않은 경우 클라이언트를 삭제합니다.
     if (Validator::validateMessage(fd, data) == false) { 
         std::cout << "validateMessage:: invalid" << std::endl;
@@ -343,25 +346,12 @@ void Server::addClient(int fd) {
 }
 
 void Server::removeClient(int clientFd) {
-    // Client *temp = _clientList[clientFd];
     Client *temp = &Lists::findClient(clientFd);
-    // _clientList.erase(clientFd);
     Lists::deleteClientList(clientFd);
     delete (temp);
     close (clientFd);
-
-    // 소멸자에 넣을 수 있는 것은 다 거기에 몰아 넣자 :D
-    // ㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋ
-
-    // 2. Client 객체를 Server 클래스 안에서 삭제
-    // iterator 사용하여 _clientList 에서 Client 객체를 찾아서 삭제
-
-    // (Client 객체를 어떤 구조에 저장해 둘 것인지?)
-    // 3. Client 객체를 삭제
-
-    // Client 클래스가 생각할 것
-    // Client 객체 삭제할 때 Client 객체가 가지고 있던 socket을 close
 }
+
 void Server::executeCommand(int fd) {
     bool killFlag; // 클라이언트 삭제 여부를 결정하는 플래그
     int killFd; // 삭제할 클라이언트의 파일 디스크립터
