@@ -19,17 +19,11 @@ private:
     std::string _host;
     std::string _ip;
 
-    //server의 recv/send buffer
-    std::string _recvBuffer;
-    std::string _sendBuffer;
-
-    // ClientMap _clientList;
-
     EventList _newEventFdList;
 
     // int kevent(int kqueueFd, const struct kevent *changelist, int nchanges, struct kevent *eventlist, int nevents, const struct timespec *timeout);
-    struct kevent _kEventList[100];
     int _nEvents;
+    struct kevent _kEventList[100];
     struct timespec _timeout;
 
     bool _isRunning;

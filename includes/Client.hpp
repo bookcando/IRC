@@ -21,8 +21,6 @@ private :
     std::string _username;
     std::string _server;
     ChannelMap _joinList;
-    std::string _recvBuffer;
-    std::string _sendBuffer;
 public :
     Client(int clientFd, in_addr info);
     ~Client();

@@ -109,8 +109,7 @@ void Server::initializeServer() {
         EV_ENABLE: 이벤트 활성화
     */
     pushEvents(_newEventFdList, _socketFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
-    pushEvents(_newEventFdList, _socketFd, EVFILT_WRITE , EV_ADD | EV_ENABLE, 0, 0, NULL);
-
+    
     // 서버 가동 플래그 설정
     _isRunning = true;
 
@@ -138,16 +137,11 @@ void Server::runServer() {
     std::cout << "Server loop started" << std::endl;
     while (_isRunning) {
         std::cout << "Waiting for events ..." << std::endl;
-        //memset(&_kEventList, 0, sizeof(_kEventList)); // 필요한지 모르겠음
-
         /*
             kevent 역할: 이벤트 변경 또는 감지
             등록할 이벤트 목록(_newEventFdList)과 발생한 이벤트를 저장할 배열(_kEventList)을 인자로 받음. 이를 통해 이벤트를 kqueue에 추가 및 변경, 발생한 이벤트 감지
             이후 발생한 이벤트 수를 반환하며, 이를 통해 프로그램은 어떤 이벤트가 발생했는지 파악 가능
         */
-        // eventCount = kevent(_kqueueFd, &_newEventFdList[0], _newEventFdList.size(), _kEventList, 100, NULL); // NULL: 블로킹 모드로 설정 (이벤트 발생까지 대기)
-        // _timeout
-        // eventCount = kevent(_kqueueFd, NULL, 0, _kEventList, 100, NULL); // NULL: 블로킹 모드로 설정 (이벤트 발생까지 대기)
         eventCount = kevent(_kqueueFd, NULL, 0, _kEventList, 100, &_timeout); // NULL: 블로킹 모드로 설정 (이벤트 발생까지 대기)
 
         std::cout << "eventCount: " << eventCount << std::endl;
@@ -174,6 +168,7 @@ void Server::runServer() {
                 }
             }
             else if (cur.flags & EVFILT_READ) { // 읽기 이벤트인지 확인
+                
                 std::cout << "EVFILT_READ" << std::endl;
                 if (isServerEvent(cur.ident)) { // 읽기 이벤트가 서버 소켓과 관련된 것인지 확인
                     std::cout << "New client" << std::endl;
@@ -256,7 +251,6 @@ void Server::handleReadEvent(int fd, intptr_t data, std::string host) {
         } else {
             break; // 줄바꿈 문자가 없으면 루프를 종료합니다.
         }
-        std::cout << "EVENT CHECK WHILE 1" << std::endl;
         /*
         메시지 추출 예시: "메시지1\n메시지2\n메시지3\n" 입력 시,
         
@@ -266,23 +260,19 @@ void Server::handleReadEvent(int fd, intptr_t data, std::string host) {
 
         message = buffer.substr(0, cut);
         buffer = buffer.substr(cut, buffer.size()); // 나머지 버퍼를 업데이트합니다.
-        std::cout << "EVENT CHECK WHILE 2" << std::endl;
 
         // 메시지 길이 제한 검사 (512 바이트)
         if (message.size() > 512) {
             Buffer::sendMessage(fd, Error::ERR_INPUTTOOLONG(host)); // 메시지가 너무 길면 오류 메시지를 전송합니다.
             continue;
         }
-        std::cout << "EVENT CHECK WHILE 3" << std::endl;
 
         // 메시지를 파싱하고, 유효한 경우 명령을 실행합니다.
         if (Message::parseMessage(message)) {
-            std::cout << "EVENT CHECK WHILE 3.if" << std::endl;
             executeCommand(fd); // 명령 실행 
         }
     }
     // 남은 버퍼를 다시 설정합니다.
-    std::cout << "EVENT CHECK 4" << std::endl;
     Buffer::setReadBuffer(std::make_pair(fd, buffer));
 }
 
@@ -310,7 +300,7 @@ void Server::handleDisconnectedClients() {
     }
 }
 
-void Server::pushEvents(EventList &eventFdList, uintptr_t fd, int16_t filter, uint16_t flags, uint32_t fflags, intptr_t data, void* udata) {//short filter, u_short flags) {
+void Server::pushEvents(EventList &eventFdList, uintptr_t fd, int16_t filter, uint16_t flags, uint32_t fflags, intptr_t data, void* udata) {
     struct kevent event;
 
     EV_SET(&event, fd, filter, flags, fflags, data, udata);
