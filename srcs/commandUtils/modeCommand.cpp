@@ -89,8 +89,10 @@ void Command::mode(Client& client, std::string const& serverHost) {
     else if ((it = chlList.find(message[1])) == chlList.end())
         Buffer::sendMessage(client.getClientFd(), Error::ERR_NOSUCHCHANNEL(serverHost, client.getNickname(), message[1]));
     // 채널 오퍼레이터가 아닌 경우
-    else if (chlList[message[1]]->getChannelOperator()->getClientFd() != client.getClientFd())
+    else if ((chlList[message[1]]->getChannelOperator() == 0) || (chlList[message[1]]->getChannelOperator()->getClientFd() != client.getClientFd())) {
+        std::cout << "Client is not channel operator||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||" << std::endl;
         Buffer::sendMessage(client.getClientFd(), Error::ERR_CHANOPRIVSNEEDED(serverHost, client.getNickname(), message[1]));
+    }
     else {
         // 메시지의 세 번째 파라미터부터 반복
         for (size_t i = 0; i < message[2].size(); i++) {

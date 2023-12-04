@@ -138,6 +138,7 @@ void Command::part(Client& client, std::string const& serverHost) {
                         Buffer::sendMessage(it->second->getClientFd(), reply::RPL_SUCCESSPART(client.getNickname(), client.getUsername(), client.getHost(), chan->getChannelName()));
                 }
                 chan->deleteClientList(&client);
+                client.deleteJoinList(chan);
                 // 채널에 아무도 남지 않은 경우 채널을 제거합니다.
                 if (chan->getUserList().size() == 0)
                     Lists::deleteChannelList(chan->getChannelName());

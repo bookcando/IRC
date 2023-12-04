@@ -191,7 +191,7 @@ void Server::runServer() {
 			}
         }
     	// 모든 새 이벤트에 대한 처리가 끝난 후, 연결이 끊긴 클라이언트를 처리
-        handleDisconnectedClients();
+        // handleDisconnectedClients();
     }
 }
 
@@ -293,7 +293,7 @@ void Server::handleDisconnectedClients() {
     // 모든 클라이언트를 순회하며 타임아웃 여부를 검사합니다.
     for (ClientMap::const_iterator it = cltList.begin(); it != cltList.end(); it++) {
         // 클라이언트의 마지막 활동 시간으로부터 현재까지의 시간 차이가 120초(2분)를 초과하는 경우
-        if (cur - it->second->getTime() > 300)
+        if (cur - it->second->getTime() > 60)
             deleteList.push_back(it->second->getClientFd()); // 해당 클라이언트를 삭제 목록에 추가합니다.
     }
     // 삭제 목록의 각 클라이언트에 대해 연결 종료 처리를 수행합니다.
@@ -349,6 +349,7 @@ void Server::removeClient(int clientFd) {
     Client *temp = &Lists::findClient(clientFd);
     Lists::deleteClientList(clientFd);
     delete (temp);
+    temp = NULL;
     close (clientFd);
 }
 

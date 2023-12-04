@@ -26,6 +26,7 @@ bool Lists::deleteClientList(int fd) {
     // 클라이언트 목록에 주어진 파일 기술자(fd)가 있으면 해당 클라이언트를 삭제합니다.
     if (clientList.find(fd) != clientList.end()) {
         delete clientList[fd]; // 클라이언트 객체를 메모리에서 해제합니다.
+        clientList[fd] = nullptr;
         clientList.erase(fd); // 맵에서 해당 엔트리를 제거합니다 (댕글링 포인터 방지)
         return true; // 성공적으로 삭제된 경우 true를 반환합니다.
     }
@@ -37,6 +38,7 @@ void Lists::clearClientList() {
     ClientMap::iterator iter = clientList.begin(); // 클라이언트 목록을 순회하기 위한 반복자를 초기화합니다.
     for (iter = clientList.begin(); iter != clientList.end(); ++iter) {
         delete iter->second; // 각 클라이언트 객체를 메모리에서 해제합니다.
+        iter->second = nullptr;
     }
     clientList.clear(); // 맵을 비웁니다.
 }
@@ -71,6 +73,7 @@ bool Lists::deleteChannelList(std::string name) {
     // 채널 목록에 주어진 이름(name)이 있으면 해당 채널을 삭제합니다.
     if (channelList.find(name) != channelList.end()) {
         delete channelList[name]; // 채널 객체를 메모리에서 해제합니다.
+        channelList[name] = nullptr;
         channelList.erase(name); // 맵에서 해당 엔트리를 제거합니다.
         return true; // 성공적으로 삭제된 경우 true를 반환합니다.
     }
@@ -82,6 +85,7 @@ void Lists::clearChannelList() {
     ChannelMap::iterator iter = channelList.begin(); // 채널 목록을 순회하기 위한 반복자를 초기화합니다.
     for (iter = channelList.begin(); iter != channelList.end(); ++iter) {
         delete iter->second; // 각 채널 객체를 메모리에서 해제합니다.
+        iter->second = nullptr;
     }
     channelList.clear(); // 맵을 비웁니다.
 }
