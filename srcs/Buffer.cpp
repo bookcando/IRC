@@ -96,6 +96,10 @@ int Buffer::sendMessage(int fd) {
         _bufferForWrite[fd] = _bufferForWrite[fd].substr(byte);
     else
         _bufferForWrite[fd] = "";
+
+    #ifdef DEBUG
+    std::cout << "send: " << fd << " " << message;
+    #endif
     return byte;
 }
 
@@ -110,5 +114,8 @@ int Buffer::sendMessage(int fd, std::string message) {
         _bufferForWrite[fd] = _bufferForWrite[fd].substr(byte);
     else
         _bufferForWrite[fd] = "";
+    #ifdef DEBUG
+    std::cout << "send: " << fd << " " << message;
+    #endif
     return byte;
 }

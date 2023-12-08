@@ -1,5 +1,6 @@
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -fsanitize=address
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98
+DEBUGFLAGS = -g3 -fsanitize=address -fsanitize=undefined -fstack-protector-all -D DEBUG
 TARGET = IRC
 SRCDIR = .
 UTILDIR = ./commandUtils
@@ -10,6 +11,10 @@ OBJS = $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(SRCS))
 DEPS = $(OBJS:.o=.d)
 
 all: $(TARGET)
+
+debug:
+	make -j CXXFLAGS="$(CXXFLAGS) $(DEBUGFLAGS)" all
+
 
 $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) $^ -o $@

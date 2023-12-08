@@ -11,6 +11,7 @@ class Channel {
 private:
 	std::string _channelName;	// 채널 이름
 	Client* _channelOperator;	// 채널 운영자
+	// ClientMap _channelOperatorList;	// 채널 운영자 명단
 	ClientMap _userList;	// 채널 가입자 명단
 	int _userLimit;	// 가입자수 상한
 	int _mode;	// 채널 모드(비트 마스킹)

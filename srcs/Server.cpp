@@ -22,6 +22,9 @@ Server::Server(std::string port, std::string pass) {
     // 패스워드 검증 및 등록
     Validator::validatePassword(pass);
     _pass = pass;
+    // 서버 호스트 패스워드, 이름
+    _opName = "admin";
+    _opPassword = "admin";
     // 호스트 이름 및 IP 주소 설정
     settingHostIp();
     // kqueue 이벤트 알림 시스템 초기화 (kqueue 인스턴스 생성 및및 인스턴스에 대한 파일 디스크립터 반환)
@@ -140,7 +143,7 @@ void Server::runServer() {
     memset(&time, 0, sizeof(time));
     std::cout << "Server loop started" << std::endl;
     while (_isRunning) {
-        std::cout << "Waiting for events ..." << std::endl;
+        // std::cout << "Waiting for events ..." << std::endl;
         /*
             kevent 역할: 이벤트 변경 또는 감지
             등록할 이벤트 목록(_newEventFdList)과 발생한 이벤트를 저장할 배열(_kEventList)을 인자로 받음. 이를 통해 이벤트를 kqueue에 추가 및 변경, 발생한 이벤트 감지
@@ -148,7 +151,7 @@ void Server::runServer() {
         */
         eventCount = kevent(_kqueueFd, NULL, 0, _kEventList, 100, &_timeout); // NULL: 블로킹 모드로 설정 (이벤트 발생까지 대기)
 
-        std::cout << "eventCount: " << eventCount << std::endl;
+        // std::cout << "eventCount: " << eventCount << std::endl;
         if (eventCount == -1)
             throw std::runtime_error("ERROR: Kevent error"); // 이벤트 발생 실패 시 예외 발생 (이벤트 발생 실패 시는 없을 것 같음)
         // 이미 kqueue에 이벤트가 등록되었으므로, 이벤트 목록 비우기
@@ -175,11 +178,11 @@ void Server::runServer() {
                 
                 std::cout << "EVFILT_READ" << std::endl;
                 if (isServerEvent(cur.ident)) { // 읽기 이벤트가 서버 소켓과 관련된 것인지 확인
-                    std::cout << "New client" << std::endl;
+                    // std::cout << "New client" << std::endl;
 					addClient(cur.ident); // 새 클라이언트 연결 요청 처리
 				}
 				else if (containsCurrentEvent(cur.ident)) { // 현재 이벤트가 처리 목록에 있는지 확인
-                    std::cout << "New read event" << std::endl;
+                    // std::cout << "New read event" << std::endl;
 					handleReadEvent(cur.ident, cur.data, _host); // 클라이언트로부터의 데이터 읽기 처리
 				} // cur.ident: 이벤트가 발생한 파일 디스크립터, cur.data: 읽어온 데이터 크기, _host: 서버의 호스트 이름
             }
@@ -357,7 +360,15 @@ void Server::executeCommand(int fd) {
     bool killFlag; // 클라이언트 삭제 여부를 결정하는 플래그
     int killFd; // 삭제할 클라이언트의 파일 디스크립터
 
-    std::cout << "executeCommand" << std::endl;
+    // std::cout << "executeCommand" << std::endl;
+    #ifdef DEBUG
+    std::cout << "fd: " << fd << " ";
+    std::cout << "Message: ";
+    for (unsigned int i = 0; i < Message::getMessage().size(); i++) {
+        std::cout << Message::getMessage()[i] << " ";
+    }
+    std::cout << std::endl;
+    #endif
 
     switch (Command::checkCommand()) { // 받은 명령어를 확인
         case IS_PASS:

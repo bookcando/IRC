@@ -53,7 +53,7 @@ void Channel::setMode(int mode, bool flag) {
     if (flag)
         _mode |= mode; // 주어진 모드를 추가합니다.
     else
-        _mode &= ~mode; // 주어진 모드를 제거합니다.
+        _mode &= mode; // 주어진 모드를 제거합니다.
 }
 
 // 채널의 키 설정
