@@ -38,10 +38,10 @@ int Command::checkCommand() { // 명령어를 확인하는 함수
 		return IS_INVITE;
 	if (message[0] == "TOPIC")
 		return IS_TOPIC;
-	if (message[0] == "OPER")
-		return IS_OPER;
-	if (message[0] == "KILL")
-		return IS_KILL;
+	// if (message[0] == "OPER")
+	// 	return IS_OPER;
+	// if (message[0] == "KILL")
+	// 	return IS_KILL;
 	return IS_NOT_ORDER;
 }
 
