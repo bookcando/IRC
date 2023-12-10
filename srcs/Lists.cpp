@@ -5,6 +5,7 @@
 #include "../includes/Command.hpp"
 #include <iostream>
 
+class Server;
 ChannelMap Lists::channelList; // 채널 정보를 저장하는 정적 맵을 선언합니다.
 ClientMap Lists::clientList; // 클라이언트 정보를 저장하는 정적 맵을 선언합니다.
 
@@ -13,10 +14,10 @@ ClientMap Lists::clientList; // 클라이언트 정보를 저장하는 정적 �
 // Lists::Lists() {} // List 클래스의 생성자입니다. 특별한 초기화 작업이 없습니다.
 // Lists::~Lists() {} // List 클래스의 소멸자입니다. 특별한 정리 작업이 없습니다.
 
-bool Lists::addClientList(int fd, in_addr info) {
+bool Lists::addClientList(int fd, in_addr info, Server *server) {
     // 클라이언트 목록에 주어진 파일 기술자(fd)가 없으면 새 클라이언트를 추가합니다.
     if (clientList.find(fd) == clientList.end()) {
-        clientList.insert(std::make_pair(fd, new Client(fd, info))); // 새 클라이언트 객체를 생성하고 목록에 추가합니다.
+        clientList.insert(std::make_pair(fd, new Client(fd, info, server))); // 새 클라이언트 객체를 생성하고 목록에 추가합니다.
         return true; // 성공적으로 추가된 경우 true를 반환합니다.
     }
     return false; // 이미 존재하는 경우 false를 반환합니다.

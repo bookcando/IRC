@@ -115,7 +115,7 @@ void Server::initializeServer() {
         EV_ADD: 이벤트 추가
         EV_ENABLE: 이벤트 활성화
     */
-    pushEvents(_newEventFdList, _socketFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
+    pushEvents(_socketFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
 
     // 서버 가동 플래그 설정
     _isRunning = true;
@@ -149,6 +149,7 @@ void Server::runServer() {
             등록할 이벤트 목록(_newEventFdList)과 발생한 이벤트를 저장할 배열(_kEventList)을 인자로 받음. 이를 통해 이벤트를 kqueue에 추가 및 변경, 발생한 이벤트 감지
             이후 발생한 이벤트 수를 반환하며, 이를 통해 프로그램은 어떤 이벤트가 발생했는지 파악 가능
         */
+        std::cout << "Waiting for events ..." << std::endl;
         eventCount = kevent(_kqueueFd, NULL, 0, _kEventList, 100, &_timeout); // NULL: 블로킹 모드로 설정 (이벤트 발생까지 대기)
 
         // std::cout << "eventCount: " << eventCount << std::endl;
@@ -162,7 +163,7 @@ void Server::runServer() {
             // _kEventList는 발생한 이벤트를 저장한 배열 (위에서 kevent 함수를 통해 이벤트를 감지하고 저장한 배열)
             // cur: 현재 이벤트
             struct kevent cur = _kEventList[i];
-            if (cur.flags & EV_ERROR) { // 이벤트에 오류 플래그가 설정되어 있는지 확인
+            if (cur.flags == EV_ERROR) { // 이벤트에 오류 플래그가 설정되어 있는지 확인
                 if (isServerEvent(cur.ident)) { // 오류 이벤트가 서버 소켓과 관련된 것인지 확인
                     std::cout << "Server error" << std::endl;
                     _isRunning = false; // 서버 이벤트인 경우 서버 자체의 오류이므로 서버 종료
@@ -174,19 +175,23 @@ void Server::runServer() {
                     break ; // 루프 종료
                 }
             }
-            else if (cur.flags & EVFILT_READ) { // 읽기 이벤트인지 확인
+            // if (cur.flags == EVFILT_READ) { // 읽기 이벤트인지 확인
+            if (cur.filter == EVFILT_READ) {
                 
                 std::cout << "EVFILT_READ" << std::endl;
                 if (isServerEvent(cur.ident)) { // 읽기 이벤트가 서버 소켓과 관련된 것인지 확인
                     // std::cout << "New client" << std::endl;
 					addClient(cur.ident); // 새 클라이언트 연결 요청 처리
+                    break ;
 				}
 				else if (containsCurrentEvent(cur.ident)) { // 현재 이벤트가 처리 목록에 있는지 확인
                     // std::cout << "New read event" << std::endl;
 					handleReadEvent(cur.ident, cur.data, _host); // 클라이언트로부터의 데이터 읽기 처리
+                    break ;
 				} // cur.ident: 이벤트가 발생한 파일 디스크립터, cur.data: 읽어온 데이터 크기, _host: 서버의 호스트 이름
             }
-            else if (cur.flags & EVFILT_WRITE) { // 쓰기 이벤트인지 확인 (-> cur.ident에서 수정함: 확인 필요)
+            // if (cur.flags == EVFILT_WRITE) { // 쓰기 이벤트인지 확인 (-> cur.ident에서 수정함: 확인 필요)
+            if (cur.filter == EVFILT_WRITE) {
 				std::cout << "EVFILT_WRITE" << std::endl;
 				if (containsCurrentEvent(cur.ident)) { // 현재 이벤트가 처리 목록에 있는지 확인
 					handleWriteEvent(cur.ident); // 클라이언트에 데이터 쓰기 처리
@@ -306,12 +311,24 @@ void Server::handleDisconnectedClients() {
     }
 }
 
-void Server::pushEvents(EventList &eventFdList, uintptr_t fd, int16_t filter, uint16_t flags, uint32_t fflags, intptr_t data, void* udata) {
+void Server::pushEvents(uintptr_t fd, int16_t filter, uint16_t flags, uint32_t fflags, intptr_t data, void* udata) {
     struct kevent event;
 
     EV_SET(&event, fd, filter, flags, fflags, data, udata);
     kevent(_kqueueFd, &event, 1, NULL, 0, NULL);
-    eventFdList.push_back(event);
+    #ifdef DEBUG
+    int flag = 0;
+    if (filter == EVFILT_READ) {
+        std::cout << "pushEvents:: EVFILT_READ" << std::endl;
+        ++flag;
+    }
+    if (filter == EVFILT_WRITE) {
+        std::cout << "pushEvents:: EVFILT_WRITE" << std::endl;
+        ++flag;
+    }
+    std::cout << "pushEvents:: flag: " << flag << std::endl;
+    #endif
+    // eventFdList.push_back(event);
 }
 
 void Server::addClient(int fd) {
@@ -325,16 +342,16 @@ void Server::addClient(int fd) {
         throw std::runtime_error("Error : accept!()"); // 연결 수락 실패 시 예외 발생
 
     // 클라이언트 소켓에 대한 읽기 이벤트를 이벤트 리스트에 추가
-    pushEvents(_newEventFdList, clientFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
+    pushEvents(clientFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
     // 클라이언트 소켓에 대한 쓰기 이벤트를 이벤트 리스트에 추가
-    pushEvents(_newEventFdList, clientFd, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, 0, NULL);
+    pushEvents(clientFd, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, 0, NULL);
     // 쓰기 이벤트는 한 번만 검출되고 더 이상 검출되지 않음(DISPATCH = 삭제, EV_ONESHOT = 한 번만 검출)
     // -> 쓰기 이벤트가 필요하면 다시 추가해야 함
     
     // 클라이언트 목록에 새 클라이언트 추가
 
     // _clientList.insert(std::make_pair(clientFd, new Client(clientFd, clientAddr.sin_addr)));
-    Lists::addClientList(clientFd, clientAddr.sin_addr);
+    Lists::addClientList(clientFd, clientAddr.sin_addr, this);
 
     
     // 클라이언트 소켓의 읽기 및 쓰기 버퍼 초기화
