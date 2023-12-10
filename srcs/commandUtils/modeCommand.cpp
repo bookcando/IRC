@@ -67,7 +67,7 @@ void Command::mode(Client& client, std::string const& serverHost) {
     messageVector const& message = Message::getMessage(); //파싱이 완료된 메세지 라인을 가져옴
     ChannelMap::iterator it;  // channelMap iterator
     std::string successMode = ""; // -> 코드 진행하면서 성공한(?) 모드 문자열을 저장할 변수
-    std::string successValue = ""; // 이건 잘 모르겠음 아직
+    std::string successValue = ""; // 이게 내가 뭐 프로세싱했고, 어떻게 변했는지 클라이언트들한테 보내줘야 하니까 그것들을 string으로 저장해서 보내주는거 같아,
     std::string supportMode = "itkol"; //
     std::string last = ""; // 이것도 아직은 모르겠고
     std::ostringstream oss; // 이것도 모르겠고 -> 파싱용!
@@ -256,19 +256,31 @@ void Command::mode(Client& client, std::string const& serverHost) {
                     // 이번 문자열이 o인 경우 : operator 조정
                     case 'o':
                         // '+' 인 경우 파라미터가 부족하거나 빈 문자열인 경우 에러 전송
-                        if (flag == true && (val >= message.size() || message[val] == ""))
+                        // if (flag == true && (val >= message.size() || message[val] == ""))
+                        if ((val >= message.size() || message[val] == ""))
                             Buffer::sendMessage(client.getClientFd(),
                                 Error::ERR_INVALIDMODEPARAM(serverHost, client.getNickname(), message[1], message[2][i], "You must specify a parameter. Syntax: <nick>"));
                         // '+' 인 경우 && 지정된 닉네임을 찾을 수 없는 경우 에러 전송
-                        else if (flag == true && !(fd = findNick(it->second->getUserList(), message[val])))
+                        // else if (flag == true && !(fd = findNick(it->second->getUserList(), message[val])))
+                        else if (!(fd = findNick(it->second->getUserList(), message[val])))
                             Buffer::sendMessage(client.getClientFd(), Error::ERR_NOSUCHNICK(serverHost, message[val]));
+                        // '-' 인 경우 && (지정된 닉네임을 찾을 수 없는 경우(닉네임이 유효해야 함) || 파라미터가 부족한 경우(지울 사람이 지정되어야(본인)함))
+                        
                         // '+'이며 파라미터가 부족하지 않고 닉네임을 찾을 수 있는 경우 || '-'인 경우
+                        
                         else {
                             successMode += "o";
                             it->second->setMode(set[4], flag);
                             if (flag == true) {
-                                successValue += last + message[val] + " ";
+                                successValue += message[val] + " ";
                                 it->second->setChannelOperator(it->second->getUserList().find(fd)->second);
+                                val++;
+                                successMode += "-o";
+                                successValue += client.getNickname() + " ";
+                            }
+                            else {
+                                successValue += message[val] + " ";
+                                it->second->setChannelOperator(0);
                                 val++;
                             }
                         }
