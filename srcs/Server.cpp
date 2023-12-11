@@ -5,6 +5,7 @@
 #include "../includes/Command.hpp"
 #include "../includes/utils/utils.hpp"
 #include "../includes/Lists.hpp"
+#include "../includes/utils/Error.hpp"
 
 /*
     Server 클래스 생성자
@@ -141,7 +142,9 @@ void Server::runServer() {
     struct timespec time;
 
     memset(&time, 0, sizeof(time));
+    #ifdef DEBUG
     std::cout << "Server loop started" << std::endl;
+    #endif
     while (_isRunning) {
         // std::cout << "Waiting for events ..." << std::endl;
         /*
@@ -149,8 +152,13 @@ void Server::runServer() {
             등록할 이벤트 목록(_newEventFdList)과 발생한 이벤트를 저장할 배열(_kEventList)을 인자로 받음. 이를 통해 이벤트를 kqueue에 추가 및 변경, 발생한 이벤트 감지
             이후 발생한 이벤트 수를 반환하며, 이를 통해 프로그램은 어떤 이벤트가 발생했는지 파악 가능
         */
-        std::cout << "Waiting for events ..." << std::endl;
+        #ifdef DEBUG
+        // std::cout << "Waiting for events ..." << std::endl;
+        #endif
         eventCount = kevent(_kqueueFd, NULL, 0, _kEventList, 100, &_timeout); // NULL: 블로킹 모드로 설정 (이벤트 발생까지 대기)
+
+
+
 
         // std::cout << "eventCount: " << eventCount << std::endl;
         if (eventCount == -1)
@@ -162,6 +170,19 @@ void Server::runServer() {
         for (int i = 0; i < eventCount; i++) {
             // _kEventList는 발생한 이벤트를 저장한 배열 (위에서 kevent 함수를 통해 이벤트를 감지하고 저장한 배열)
             // cur: 현재 이벤트
+
+            #ifdef DEBUG
+            // //print the event detail
+            // std::cout << "ident :" << _kEventList[i].ident << std::endl;
+            // std::cout << "filter :" << _kEventList[i].filter << std::endl;
+            // std::cout << "flags :" << _kEventList[i].flags << std::endl;
+            // std::cout << "fflags :" << _kEventList[i].fflags << std::endl;
+            // std::cout << "data :" << _kEventList[i].data << std::endl;
+            // std::cout << "udata :" << _kEventList[i].udata << std::endl;
+            #endif
+
+
+
             struct kevent cur = _kEventList[i];
             if (cur.flags == EV_ERROR) { // 이벤트에 오류 플래그가 설정되어 있는지 확인
                 if (isServerEvent(cur.ident)) { // 오류 이벤트가 서버 소켓과 관련된 것인지 확인
@@ -386,6 +407,58 @@ void Server::executeCommand(int fd) {
     }
     std::cout << std::endl;
     #endif
+
+    Client &me = Lists::findClient(fd); // 이걸로 분기처리해서 PASS NICK USER 순서대로 안하면 못들어오게 해야 함
+    int meLoginStatus = me.getPassConnect();
+    // 1. 현재 클라이언트이 PASS가 처리되었는지 확인
+    // 2. PASS가 처리되지 않았다면 PASS 처리를 하려고 하는지 확인
+    // 3. PASS 처리를 하려고 한다면 PASS 처리
+    // 4. PASS 처리를 하지 않으려고 한다면 에러 메시지 전송
+
+    // 
+
+    if (meLoginStatus != IS_LOGIN) {
+        int commandFlag = Command::checkCommand();
+
+        // 우리 서버에서 PING을 보내지 않는 이유 :
+        // 우리는 서버가 하나라서 socket 닫힌 것만 확인하면 됨
+        if (commandFlag == IS_PING) {
+            Command::ping(Lists::findClient(fd), _host);
+            return ;
+        }
+
+        if (!(meLoginStatus & IS_PASS)) {
+            if (commandFlag != IS_PASS)
+                Buffer::sendMessage(fd, Error::ERR_NOTREGISTERED(_host, ":You have not registered PASS"));
+            else
+                Command::pass(Lists::findClient(fd), _pass, _host);
+        }
+        else if (!(meLoginStatus & IS_NICK)) {
+            if (commandFlag == IS_PASS)
+                Command::pass(Lists::findClient(fd), _pass, _host);
+            else if (commandFlag != IS_NICK)
+                Buffer::sendMessage(fd, Error::ERR_NOTREGISTERED(_host, ":You have not registered NICK"));
+            else
+                Command::nick(Lists::findClient(fd), _host);
+        }
+        else if (!(meLoginStatus & IS_USER)) {
+            if (commandFlag == IS_PASS)
+                Command::pass(Lists::findClient(fd), _pass, _host);
+            else if (commandFlag == IS_NICK)
+                Command::nick(Lists::findClient(fd), _host);
+            else if (commandFlag != IS_USER)
+                Buffer::sendMessage(fd, Error::ERR_NOTREGISTERED(_host, ":You have not registered USER"));
+            else
+                Command::user(Lists::findClient(fd), _host, _ip, _startTime);
+        }
+        return ;
+    }
+    // *********************************************************************************
+    // 위의 sendMessage-ERROR 부분 NOTREGISTERED 로 바꿈.
+    #ifdef DEBUG
+    std::cout << "I AM HERE ***********************************************************" << std::endl;
+    #endif 
+
 
     switch (Command::checkCommand()) { // 받은 명령어를 확인
         case IS_PASS:
