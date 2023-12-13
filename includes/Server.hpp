@@ -59,7 +59,8 @@ public:
 
     void executeCommand(int fd);
 
-    void pushEvents(EventList &eventFdList, uintptr_t fd, int16_t filter, uint16_t flags, uint32_t fflags, intptr_t data, void* udata);
+    // void pushEvents(EventList &eventFdList, uintptr_t fd, int16_t filter, uint16_t flags, uint32_t fflags, intptr_t data, void* udata);
+    void pushEvents(uintptr_t fd, int16_t filter, uint16_t flags, uint32_t fflags, intptr_t data, void* udata);
     // struct kevent {
     //     uintptr_t       ident;          /*  identifier for this event */
     //     short           filter;         /*  filter for event */

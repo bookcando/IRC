@@ -21,8 +21,11 @@ private :
     std::string _username;
     std::string _server;
     ChannelMap _joinList;
+
+    Server* _serverPtr;
+
 public :
-    Client(int clientFd, in_addr info);
+    Client(int clientFd, in_addr info, Server* server);
     ~Client();
 
 	void setPassConnect(int flag);
@@ -47,6 +50,9 @@ public :
 	std::string const& getServer() const;
 	time_t const& getTime() const;
 	in_addr const& getAddr() const;
+
+    void setServerPtr(Server* server);
+    Server* getServerPtr() const;
 };
 
 #endif

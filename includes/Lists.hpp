@@ -5,12 +5,14 @@
 # include "./utils/Containers.hpp"
 # include <sys/socket.h>
 
+class Server;
+
 class Lists {
 private:
 	static ClientMap clientList;
 	static ChannelMap channelList;
 public:
-	static bool addClientList(int fd, struct in_addr info);
+	static bool addClientList(int fd, struct in_addr info, Server *server);
 	static bool deleteClientList(int fd);
 	static void clearClientList();
 	static Client& findClient(int fd);
