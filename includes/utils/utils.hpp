@@ -51,13 +51,6 @@ class Channel;
 # define CHANNELNAME_LEN 200 // 채널 이름 최대 길이(RFC 1459)
 # define CHANNEL_LIMIT_PER_USER 10 // 클라이언트 당 참가할 수 있는 채널 상항
 
-/*
-	유틸이 할 일
-	0. define 매크로 저장
-	1. 시간 계산 함수
-	2. message에서 내용물 걸러주는 함수
-*/
-
 enum Color {
 	RESET = 0,
 	RED = 31,
