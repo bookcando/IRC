@@ -59,14 +59,6 @@ void Command::nick(Client& client, std::string const& serverHost) {
     messageVector const& message = Message::getMessage();
 
     // NICK 명령어에 대한 유효성 검사 및 처리를 수행합니다.
-    #ifdef DEBUG
-    std::cout << "NICK ITERATOR" << std::endl;
-    unsigned int i = 0;
-    while (i < message.size()) {
-        std::cout << message[i] << std::endl;
-        ++i;
-    }
-    #endif
     // std::cout << "NICK: " << message[1] << std::endl;
     if (message.size() != 2)
         Buffer::sendMessage(client.getClientFd(), Error::ERR_NONICKNAMEGIVEN(serverHost));
