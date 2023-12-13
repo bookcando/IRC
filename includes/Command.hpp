@@ -19,8 +19,6 @@ namespace Command {
 	void mode(Client& client, std::string const& serverHost);
 	void privmsg(Client& client, std::string const& serverHost);
 
-	void notice(Client& client);//
-
 	void part(Client& client, std::string const& serverHost);
 	void join(Client& client, std::string const& serverHost);
 	void kick(Client& client, std::string const& serverHost);

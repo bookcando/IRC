@@ -22,11 +22,8 @@ class Channel;
 # define IS_PART 1 << 8
 # define IS_KICK 1 << 9
 # define IS_PRIVMSG 1 << 10
-# define IS_NOTICE 1 << 11
 # define IS_INVITE 1 << 12
 # define IS_TOPIC 1 << 13
-# define IS_OPER 1 << 14
-# define IS_KILL 1 << 15
 # define IS_NOT_ORDER 421
 
 // error와 reply의 숫자, 채널과 클라이언트 쪽에서 사용

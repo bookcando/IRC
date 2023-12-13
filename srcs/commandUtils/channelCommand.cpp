@@ -46,7 +46,7 @@ void Command::join(Client& client, std::string const& serverHost) {
 
     // JOIN 명령어의 유효성 검사를 수행합니다.
     if (message.size() < 2 || message.size() > 3)
-        Buffer::sendMessage(client.getClientFd(), Error::ERR_NEEDMOREPARAMS(serverHost, "JOIN"));
+        Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_NEEDMOREPARAMS(serverHost, "JOIN"));
     else {
         // 채널 이름과 키를 파싱합니다.
         chan.str(message[1]);
@@ -58,7 +58,7 @@ void Command::join(Client& client, std::string const& serverHost) {
                 std::getline(key, keyStr, ',');
             // 채널 이름의 유효성을 검사합니다.
             if (!isChanName(chanStr) || chanStr.size() > 200) {
-                Buffer::sendMessage(client.getClientFd(), Error::ERR_BADCHANMASK(serverHost, client.getNickname(), chanStr));
+                Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_BADCHANMASK(serverHost, client.getNickname(), chanStr));
                 continue;
             }
             // 채널이 존재하지 않으면 새로 생성합니다.
@@ -76,29 +76,29 @@ void Command::join(Client& client, std::string const& serverHost) {
             switch (client.joinChannel(&Lists::findChannel(chanStr), keyStr)) {
                 // 가입 실패 상황에 따른 오류 메시지를 전송합니다.
                 case TOOMANYCHANNELS:
-                    Buffer::sendMessage(client.getClientFd(), Error::ERR_TOOMANYCHANNELS(serverHost, client.getNickname(), chanStr));
+                    Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_TOOMANYCHANNELS(serverHost, client.getNickname(), chanStr));
                     break;
                 case CHANNELISFULL:
-                    Buffer::sendMessage(client.getClientFd(), Error::ERR_CHANNELISFULL(serverHost, client.getNickname(), chanStr));
+                    Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_CHANNELISFULL(serverHost, client.getNickname(), chanStr));
                     break;
                 case INVITEONLYCHAN:
-                    Buffer::sendMessage(client.getClientFd(), Error::ERR_INVITEONLYCHAN(serverHost, client.getNickname(), chanStr));
+                    Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_INVITEONLYCHAN(serverHost, client.getNickname(), chanStr));
                     break;
                 case BADCHANNELKEY:
-                    Buffer::sendMessage(client.getClientFd(), Error::ERR_BADCHANNELKEY(serverHost, client.getNickname(), chanStr));
+                    Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_BADCHANNELKEY(serverHost, client.getNickname(), chanStr));
                     break;
                 // 가입 성공 시 관련 메시지를 전송합니다.
                 case IS_SUCCESS:
                     channel->deleteInviteList(&client);
-                    Buffer::sendMessage(client.getClientFd(), reply::RPL_SUCCESSJOIN(client.getNickname(), client.getUsername(), client.getHost(), chanStr));
+                    Buffer::saveMessageToBuffer(client.getClientFd(), reply::RPL_SUCCESSJOIN(client.getNickname(), client.getUsername(), client.getHost(), chanStr));
                     if (channel->getTopic() != "")
-                        Buffer::sendMessage(client.getClientFd(), reply::RPL_TOPIC(serverHost, client.getNickname(), chanStr, channel->getTopic()));
-                    Buffer::sendMessage(client.getClientFd(), reply::RPL_NAMREPLY(serverHost, client.getNickname(), chanStr, channel->getStrUserList()));
-                    Buffer::sendMessage(client.getClientFd(), reply::RPL_ENDOFNAMES(serverHost, client.getNickname(), chanStr));
+                        Buffer::saveMessageToBuffer(client.getClientFd(), reply::RPL_TOPIC(serverHost, client.getNickname(), chanStr, channel->getTopic()));
+                    Buffer::saveMessageToBuffer(client.getClientFd(), reply::RPL_NAMREPLY(serverHost, client.getNickname(), chanStr, channel->getStrUserList()));
+                    Buffer::saveMessageToBuffer(client.getClientFd(), reply::RPL_ENDOFNAMES(serverHost, client.getNickname(), chanStr));
                     // 다른 채널 사용자에게도 가입 사실을 알립니다.
                     for (ClientMap::const_iterator iter = channel->getUserList().begin(); iter != channel->getUserList().end(); iter++)
                         if (iter->second != &client)
-                            Buffer::sendMessage(iter->second->getClientFd(), reply::RPL_SUCCESSJOIN(client.getNickname(), client.getUsername(), client.getHost(), chanStr));
+                            Buffer::saveMessageToBuffer(iter->second->getClientFd(), reply::RPL_SUCCESSJOIN(client.getNickname(), client.getUsername(), client.getHost(), chanStr));
                     break;
             }
             chanStr = "";
@@ -119,7 +119,7 @@ void Command::part(Client& client, std::string const& serverHost) {
 
     // PART 명령어의 유효성 검사를 수행합니다.
     if (message.size() < 2 || message.size() > 3)
-        Buffer::sendMessage(client.getClientFd(), Error::ERR_NEEDMOREPARAMS(serverHost, "PART"));
+        Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_NEEDMOREPARAMS(serverHost, "PART"));
     else {
         // 각 채널에 대해 처리를 수행합니다.
         str.str(message[1]);
@@ -131,17 +131,17 @@ void Command::part(Client& client, std::string const& serverHost) {
                 chan = NULL;
             // 채널이 없거나 사용자가 채널에 속하지 않은 경우 오류 메시지를 전송합니다.
             if (chan == NULL)
-                Buffer::sendMessage(client.getClientFd(), Error::ERR_NOSUCHCHANNEL(serverHost, client.getNickname(), chanStr));
+                Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_NOSUCHCHANNEL(serverHost, client.getNickname(), chanStr));
             else if (chan->getUserList().find(client.getClientFd()) == chan->getUserList().end())
-                Buffer::sendMessage(client.getClientFd(), Error::ERR_NOTONCHANNEL(serverHost, client.getNickname(), chan->getChannelName()));
+                Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_NOTONCHANNEL(serverHost, client.getNickname(), chan->getChannelName()));
             else {
                 // 채널에서 사용자를 제거하고 관련 메시지를 전송합니다.
                 userList = chan->getUserList();
                 for (it = userList.begin(); it != userList.end(); it++) {
                     if (message.size() == 3) // 이유가 제공된 경우 메시지에 추가합니다.
-                        Buffer::sendMessage(it->second->getClientFd(), reply::RPL_SUCCESSPART(client.getNickname(), client.getUsername(), client.getHost(), chan->getChannelName(), message[2]));
+                        Buffer::saveMessageToBuffer(it->second->getClientFd(), reply::RPL_SUCCESSPART(client.getNickname(), client.getUsername(), client.getHost(), chan->getChannelName(), message[2]));
                     else
-                        Buffer::sendMessage(it->second->getClientFd(), reply::RPL_SUCCESSPART(client.getNickname(), client.getUsername(), client.getHost(), chan->getChannelName()));
+                        Buffer::saveMessageToBuffer(it->second->getClientFd(), reply::RPL_SUCCESSPART(client.getNickname(), client.getUsername(), client.getHost(), chan->getChannelName()));
                 }
                 chan->deleteClientList(&client);
                 client.deleteJoinList(chan);
@@ -167,25 +167,25 @@ void Command::kick(Client& client, std::string const& serverHost) {
 
     // KICK 명령어의 유효성 검사를 수행합니다.
     if (message.size() < 3 || message.size() > 4)
-        Buffer::sendMessage(client.getClientFd(), Error::ERR_NEEDMOREPARAMS(serverHost, "KICK"));
+        Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_NEEDMOREPARAMS(serverHost, "KICK"));
     else if (!Lists::hasChannel(message[1]))
-        Buffer::sendMessage(client.getClientFd(), Error::ERR_NOSUCHCHANNEL(serverHost, client.getNickname(), message[1]));
+        Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_NOSUCHCHANNEL(serverHost, client.getNickname(), message[1]));
     else if ((chan = &Lists::findChannel(message[1]))->getChannelOperator() == NULL || chan->getChannelOperator()->getClientFd() != client.getClientFd())
-        Buffer::sendMessage(client.getClientFd(), Error::ERR_CHANOPRIVSNEEDED(serverHost, client.getNickname(), message[1]));
+        Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_CHANOPRIVSNEEDED(serverHost, client.getNickname(), message[1]));
     else {
         // 각 사용자에 대해 처리를 수행합니다.
         str.str(message[2]);
         while (std::getline(str, userStr, ',')) {
             userList = chan->getUserList();
             if ((tgtFd = findNick(userList, userStr)) == 0)
-                Buffer::sendMessage(client.getClientFd(), Error::ERR_USERNOTINCHANNEL(serverHost, client.getNickname(), userStr, chan->getChannelName()));
+                Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_USERNOTINCHANNEL(serverHost, client.getNickname(), userStr, chan->getChannelName()));
             else {
                 // 지정된 사용자를 채널에서 제거하고 관련 메시지를 전송합니다.
                 for (it = userList.begin(); it != userList.end(); it++) {
                     if (message.size() == 4) // 이유가 제공된 경우 메시지에 추가합니다.
-                        Buffer::sendMessage(it->second->getClientFd(), reply::RPL_SUCCESSKICK(client.getNickname(), client.getUsername(), client.getHost(), message[1], userStr, message[3]));
+                        Buffer::saveMessageToBuffer(it->second->getClientFd(), reply::RPL_SUCCESSKICK(client.getNickname(), client.getUsername(), client.getHost(), message[1], userStr, message[3]));
                     else
-                        Buffer::sendMessage(it->second->getClientFd(), reply::RPL_SUCCESSKICK(client.getNickname(), client.getUsername(), client.getHost(), message[1], userStr));
+                        Buffer::saveMessageToBuffer(it->second->getClientFd(), reply::RPL_SUCCESSKICK(client.getNickname(), client.getUsername(), client.getHost(), message[1], userStr));
                 }
                 chan->deleteClientList(userList.find(tgtFd)->second);
             }
@@ -203,24 +203,24 @@ void Command::invite(Client& client, std::string const& serverHost) {
 
     // INVITE 명령어의 유효성 검사를 수행합니다.
     if (message.size() != 3)
-        Buffer::sendMessage(client.getClientFd(), Error::ERR_NEEDMOREPARAMS(serverHost, "INVITE"));
+        Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_NEEDMOREPARAMS(serverHost, "INVITE"));
     else if (!Lists::hasChannel(message[2]))
-        Buffer::sendMessage(client.getClientFd(), Error::ERR_NOSUCHCHANNEL(serverHost, client.getNickname(), message[2]));
+        Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_NOSUCHCHANNEL(serverHost, client.getNickname(), message[2]));
     else if ((userList = (chan = &Lists::findChannel(message[2]))->getUserList()).find(client.getClientFd()) == userList.end())
-        Buffer::sendMessage(client.getClientFd(), Error::ERR_NOTONCHANNEL(serverHost, client.getNickname(), message[2]));
+        Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_NOTONCHANNEL(serverHost, client.getNickname(), message[2]));
     else if (chan->getMode() & INVITE_CHANNEL
                 && (chan->getChannelOperator() == NULL || chan->getChannelOperator()->getClientFd() != client.getClientFd()))
-        Buffer::sendMessage(client.getClientFd(), Error::ERR_CHANOPRIVSNEEDED(serverHost, client.getNickname(), message[2]));
+        Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_CHANOPRIVSNEEDED(serverHost, client.getNickname(), message[2]));
     else if (findNick(userList, message[1]))
-        Buffer::sendMessage(client.getClientFd(), Error::ERR_USERONCHANNEL(serverHost, client.getNickname(), message[1], message[2]));
+        Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_USERONCHANNEL(serverHost, client.getNickname(), message[1], message[2]));
     else {
         // 초대할 사용자를 찾고, 채널에 초대합니다.
         if (!(tgtFd = findNick(Lists::getClientList(), message[1])))
             return ;
         else {
             chan->addInviteList(&Lists::findClient(tgtFd));
-            Buffer::sendMessage(client.getClientFd(), reply::RPL_INVITING(serverHost, client.getNickname(), message[2], message[1]));
-            Buffer::sendMessage(tgtFd, reply::RPL_SUCCESSINVITING(client.getNickname(), client.getUsername(), client.getHost(), message[2], message[1]));
+            Buffer::saveMessageToBuffer(client.getClientFd(), reply::RPL_INVITING(serverHost, client.getNickname(), message[2], message[1]));
+            Buffer::saveMessageToBuffer(tgtFd, reply::RPL_SUCCESSINVITING(client.getNickname(), client.getUsername(), client.getHost(), message[2], message[1]));
         }
     }
 }
@@ -234,26 +234,26 @@ void Command::topic(Client& client, std::string const& serverHost) {
 
     // 메시지의 길이에 따라 유효성을 검사합니다.
     if (message.size() < 2 || message.size() > 3)
-        Buffer::sendMessage(client.getClientFd(), Error::ERR_NEEDMOREPARAMS(serverHost, "TOPIC"));
+        Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_NEEDMOREPARAMS(serverHost, "TOPIC"));
     else if (!Lists::hasChannel(message[1])) // 해당 채널이 존재하는지 확인합니다.
-        Buffer::sendMessage(client.getClientFd(), Error::ERR_NOSUCHCHANNEL(serverHost, client.getNickname(), message[1]));
+        Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_NOSUCHCHANNEL(serverHost, client.getNickname(), message[1]));
     else if (message.size() == 2) { // 메시지가 2개인 경우 (채널 토픽 조회)
         chan = &Lists::findChannel(message[1]); // 채널을 찾습니다.
         if (chan->getTopic() == "") // 토픽이 설정되지 않은 경우
-            Buffer::sendMessage(client.getClientFd(), reply::RPL_NOTOPIC(serverHost, client.getNickname(), message[1]));
+            Buffer::saveMessageToBuffer(client.getClientFd(), reply::RPL_NOTOPIC(serverHost, client.getNickname(), message[1]));
         else // 토픽이 있는 경우, 해당 토픽을 클라이언트에게 전송합니다.
-            Buffer::sendMessage(client.getClientFd(), reply::RPL_TOPIC(serverHost, client.getNickname(), message[1], chan->getTopic()));
+            Buffer::saveMessageToBuffer(client.getClientFd(), reply::RPL_TOPIC(serverHost, client.getNickname(), message[1], chan->getTopic()));
     }
     else { // 메시지가 3개인 경우 (채널 토픽 설정)
         chan = &Lists::findChannel(message[1]); // 채널을 찾습니다.
 
         if ((chan->getMode() & SAFE_TOPIC) && (chan->getChannelOperator() == NULL || chan->getChannelOperator()->getClientFd() != client.getClientFd()))
-            Buffer::sendMessage(client.getClientFd(), Error::ERR_CHANOPRIVSNEEDED(serverHost, client.getNickname(), message[1])); // 토픽 설정 권한이 있는지 확인
+            Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_CHANOPRIVSNEEDED(serverHost, client.getNickname(), message[1])); // 토픽 설정 권한이 있는지 확인
 
         // 채널에 가입되어 있는지 확인
         // 채널에 가입되어 있지 않으면 ERROR : NOT ON CHANNEL;
         else if (chan->getUserList().find(client.getClientFd()) == chan->getUserList().end())
-            Buffer::sendMessage(client.getClientFd(), Error::ERR_NOTONCHANNEL(serverHost, client.getNickname(), message[1]));
+            Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_NOTONCHANNEL(serverHost, client.getNickname(), message[1]));
 
         else {
             userList = chan->getUserList(); // 채널의 사용자 목록을 가져옵니다.
@@ -261,7 +261,7 @@ void Command::topic(Client& client, std::string const& serverHost) {
 
             // 채널의 모든 사용자에게 새로운 토픽을 알립니다.
             for (it = userList.begin(); it != userList.end(); it++)
-                Buffer::sendMessage(it->second->getClientFd(), reply::RPL_SUCCESSTOPIC(client.getNickname(), client.getUsername(), client.getHost(), message[1], message[2]));
+                Buffer::saveMessageToBuffer(it->second->getClientFd(), reply::RPL_SUCCESSTOPIC(client.getNickname(), client.getUsername(), client.getHost(), message[1], message[2]));
         }
     }
 }

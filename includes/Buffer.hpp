@@ -18,7 +18,7 @@ public:
     static std::string getWriteBuffer(int fd);
     static int readMessage(int fd, intptr_t data);
     static int sendMessage(int fd);
-    static int sendMessage(int fd, std::string message);
+    static int saveMessageToBuffer(int fd, std::string message);
     static void setReadBuffer(std::pair<int, std::string> val);
     static void setWriteBuffer(std::pair<int, std::string> val);
 };

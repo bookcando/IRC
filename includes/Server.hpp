@@ -19,8 +19,6 @@ private:
     std::string _host;
     std::string _ip;
 
-    EventList _newEventFdList;
-
     int _nEvents;
     struct kevent _kEventList[100];
     struct timespec _timeout;

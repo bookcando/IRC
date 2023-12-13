@@ -28,9 +28,9 @@ void Command::quit(Client& client) {
     for (ClientMap::const_iterator it = clientList.begin(); it != clientList.end(); it++) {
         // 현재 클라이언트가 아닌 경우 성공적인 퇴장 메세지 전송
         if (it->second != &client)
-            Buffer::sendMessage(it->second->getClientFd(), reply::RPL_SUCCESSQUIT(client.getNickname(), client.getUsername(), client.getHost(), reason));
+            Buffer::saveMessageToBuffer(it->second->getClientFd(), reply::RPL_SUCCESSQUIT(client.getNickname(), client.getUsername(), client.getHost(), reason));
         // 현재 클라이언트인 경우 에러 메세지 전송
         else
-            Buffer::sendMessage(client.getClientFd(), "ERROR :Connection out");
+            Buffer::saveMessageToBuffer(client.getClientFd(), "ERROR :Connection out");
     }
 }

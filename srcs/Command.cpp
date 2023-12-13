@@ -28,8 +28,6 @@ int Command::checkCommand() { // 명령어를 확인하는 함수
 		return IS_PART;
 	if (message[0] == "PRIVMSG")
 		return IS_PRIVMSG;
-	if (message[0] == "NOTICE")
-		return IS_NOTICE;
 	if (message[0] == "PART")
 		return IS_PART;
 	if (message[0] == "KICK")
