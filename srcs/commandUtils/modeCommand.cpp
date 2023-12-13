@@ -84,17 +84,17 @@ void Command::mode(Client& client, std::string const& serverHost) {
         oss << it->second->getTime();  // 채널 생성 시간을 문자열로 변환
         createSetMode(it->second->getMode(), *it->second, successMode, successValue); // 채널 모드를 문자열로 변환
         // 모드 정보를 클라이언트에게 전송 + 채널 생성 시간을 클라이언트에게 전송
-        Buffer::sendMessage(client.getClientFd(), reply::RPL_CHANNELMODEIS(serverHost, client.getNickname(), message[1], successMode, successValue));
-        Buffer::sendMessage(client.getClientFd(), reply::RPL_CREATIONTIME(serverHost, client.getNickname(), message[1], oss.str()));
+        Buffer::saveMessageToBuffer(client.getClientFd(), reply::RPL_CHANNELMODEIS(serverHost, client.getNickname(), message[1], successMode, successValue));
+        Buffer::saveMessageToBuffer(client.getClientFd(), reply::RPL_CREATIONTIME(serverHost, client.getNickname(), message[1], oss.str()));
     }
     // 메세지가 3칸 미만 (mode <something>) or (mode) : NEEDMOREPARAMS 에러 반환
     else if (message.size() < 3)
-        Buffer::sendMessage(client.getClientFd(), Error::ERR_NEEDMOREPARAMS(serverHost, "MODE"));
+        Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_NEEDMOREPARAMS(serverHost, "MODE"));
     // 1번째 파라미터 <channel name>이 존재하지 않는 경우 : NOSUCHCHANNEL 에러 반환
     else if ((it = tempChannelList.find(message[1])) == tempChannelList.end())
-        Buffer::sendMessage(client.getClientFd(), Error::ERR_NOSUCHCHANNEL(serverHost, client.getNickname(), message[1]));
+        Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_NOSUCHCHANNEL(serverHost, client.getNickname(), message[1]));
     else if ((tempChannelList[message[1]]->getChannelOperator() == 0) || (tempChannelList[message[1]]->getChannelOperator()->getClientFd() != client.getClientFd())) {
-        Buffer::sendMessage(client.getClientFd(), Error::ERR_CHANOPRIVSNEEDED(serverHost, client.getNickname(), message[1]));
+        Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_CHANOPRIVSNEEDED(serverHost, client.getNickname(), message[1]));
     }
     else {
         for (size_t i = 0; i < message[2].size(); i++) {
@@ -131,7 +131,7 @@ void Command::mode(Client& client, std::string const& serverHost) {
                     case 'l':
                         // '+' 인 경우 && (파라미터가 부족하거나(mode params가 전혀 없다는 뜻) || 숫자가 아닌 경우) -> 에러 전송
                         if (flag == true && (val >= message.size() || !chkNum(message[val])))
-                            Buffer::sendMessage(client.getClientFd(),
+                            Buffer::saveMessageToBuffer(client.getClientFd(),
                                 Error::ERR_INVALIDMODEPARAM(serverHost, client.getNickname(), message[1], message[2][i], "You must specify a parameter. Syntax: <limit>"));
                         // ()'+' && 오류가 없거나) '-'인 경우
                         else {
@@ -159,11 +159,11 @@ void Command::mode(Client& client, std::string const& serverHost) {
                     case 'k':
                         // 파라미터가 부족하거나 빈 문자열인 경우 에러 전송
                         if (val >= message.size() || message[val] == "")
-                            Buffer::sendMessage(client.getClientFd(),
+                            Buffer::saveMessageToBuffer(client.getClientFd(),
                                 Error::ERR_INVALIDMODEPARAM(serverHost, client.getNickname(), message[1], message[2][i], "You must specify a parameter. Syntax: <key>"));
                         // '-' 인 경우 키가 일치하지 않으면 에러 전송
                         else if ((flag == false && message[val] != it->second->getKey()))
-                            Buffer::sendMessage(client.getClientFd(),
+                            Buffer::saveMessageToBuffer(client.getClientFd(),
                                 Error::ERR_INVALIDMODEPARAM(serverHost, client.getNickname(), it->second->getChannelName(), 'k', "You must specify a parameter for the key mode. Syntax: <key>."));
                         else {
                             successMode += "k";
@@ -185,10 +185,10 @@ void Command::mode(Client& client, std::string const& serverHost) {
 
                     case 'o':
                         if ((val >= message.size() || message[val] == ""))
-                            Buffer::sendMessage(client.getClientFd(),
+                            Buffer::saveMessageToBuffer(client.getClientFd(),
                                 Error::ERR_INVALIDMODEPARAM(serverHost, client.getNickname(), message[1], message[2][i], "You must specify a parameter. Syntax: <nick>"));
                         else if (!(fd = findNick(it->second->getUserList(), message[val])))
-                            Buffer::sendMessage(client.getClientFd(), Error::ERR_NOSUCHNICK(serverHost, message[val]));
+                            Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_NOSUCHNICK(serverHost, message[val]));
                         else {
                             successMode += "o";
                             it->second->setMode(set[4], flag);
@@ -209,7 +209,7 @@ void Command::mode(Client& client, std::string const& serverHost) {
                 }
             } else {
                 // 지원하지 않는 모드(itkol안에 있는 문자가 아님)인 경우 에러 전송
-                Buffer::sendMessage(client.getClientFd(), Error::ERR_UNKNOWNMODE(serverHost, client.getNickname(), message[2][i]));
+                Buffer::saveMessageToBuffer(client.getClientFd(), Error::ERR_UNKNOWNMODE(serverHost, client.getNickname(), message[2][i]));
             }
         }
     }
@@ -221,6 +221,6 @@ void Command::mode(Client& client, std::string const& serverHost) {
             successValue = successValue.substr(0, successValue.size() - 1);
         // 모든 사용자에게 성공한 모드 정보 전송
         for (ClientMap::const_iterator iter = userList.begin(); iter != userList.end(); iter++)
-            Buffer::sendMessage(iter->second->getClientFd(), reply::RPL_SUCCESSMODE(client.getNickname(), client.getUsername(), client.getHost(), message[1], successMode, successValue));
+            Buffer::saveMessageToBuffer(iter->second->getClientFd(), reply::RPL_SUCCESSMODE(client.getNickname(), client.getUsername(), client.getHost(), message[1], successMode, successValue));
     }
 }

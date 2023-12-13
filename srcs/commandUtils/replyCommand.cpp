@@ -70,10 +70,6 @@ std::string const reply::RPL_SUCCESSPRIVMSG(std::string const& nick, std::string
 	return ":" + nick + "!" + user + "@" + serv + " PRIVMSG " + tgtName + " :" + talk + suffix;
 }
 
-std::string const reply::RPL_SUCCESSNOTICE(std::string const& nick, std::string const& user, std::string const& serv, std::string const& tgtName, std::string const& talk) {
-	return ":" + nick + "!" + user + "@" + serv + " NOTICE " + tgtName + " :" + talk + suffix;
-}
-
 std::string const reply::RPL_SUCCESSPART(std::string const& nick, std::string const& user, std::string const& serv, std::string const& chName) {
 	return ":" + nick + "!" + user + "@" + serv + " PART " + chName + suffix;
 }

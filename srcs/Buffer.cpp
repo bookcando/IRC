@@ -108,7 +108,7 @@ int Buffer::sendMessage(int fd) {
     return byte;
 }
 
-int Buffer::sendMessage(int fd, std::string message) {
+int Buffer::saveMessageToBuffer(int fd, std::string message) {
     Lists::findClient(fd).getServerPtr()->pushEvents(fd, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, 0, NULL);
     _bufferForWrite[fd] += message;
     return 0;

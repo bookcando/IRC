@@ -93,34 +93,29 @@ void Server::initializeServer() {
 
 void Server::runServer() {
     int eventCount = 0;
-    struct timespec time;
 
-    memset(&time, 0, sizeof(time));
     while (_isRunning) {
         eventCount = kevent(_kqueueFd, NULL, 0, _kEventList, 100, &_timeout); // NULL: 블로킹 모드로 설정 (이벤트 발생까지 대기)
-
         if (eventCount == -1)
             throw std::runtime_error("ERROR: Kevent error"); // 이벤트 발생 실패 시 예외 발생 (이벤트 발생 실패 시는 없을 것 같음)
-        // 이미 kqueue에 이벤트가 등록되었으므로, 이벤트 목록 비우기
-        _newEventFdList.clear();
 
         // 발생한 이벤트 수 만큼 루프
         for (int i = 0; i < eventCount; i++) {
 
             struct kevent cur = _kEventList[i];
             if (cur.flags == EV_ERROR) { // 이벤트에 오류 플래그가 설정되어 있는지 확인
-                if (isServerEvent(cur.ident)) { // 오류 이벤트가 서버 소켓과 관련된 것인지 확인
+                if (isServerEvent(cur.ident)) { // 서버 소켓에서 오류가 난 부분
                     _isRunning = false; // 서버 이벤트인 경우 서버 자체의 오류이므로 서버 종료
+                    //서버가 망가지니, Client들을 전부 내보내는 부분이 필요할까??
                     break; // 루프 종료
                 }
-                else {
+                else { // 클라이언트 소켓에서 오류가 난 부분
+                    Command::quit(Lists::findClient(cur.ident)); // 클라이언트 연결 종료 처리
                     deleteClient(cur.ident); // 오류 이벤트가 클라이언트와 관련된 것이면 해당 클라이언트 삭제
                     break ; // 루프 종료
                 }
             }
-            // if (cur.flags == EVFILT_READ) { // 읽기 이벤트인지 확인
-            if (cur.filter == EVFILT_READ) {
-                
+            if (cur.filter == EVFILT_READ) { // 이벤트가 읽기 이벤트인지 확인
                 if (isServerEvent(cur.ident)) { // 읽기 이벤트가 서버 소켓과 관련된 것인지 확인
 					addClient(cur.ident); // 새 클라이언트 연결 요청 처리
                     break ;
@@ -130,8 +125,7 @@ void Server::runServer() {
                     break ;
 				}
             }
-            // if (cur.flags == EVFILT_WRITE) { // 쓰기 이벤트인지 확인 (-> cur.ident에서 수정함: 확인 필요)
-            if (cur.filter == EVFILT_WRITE) {
+            if (cur.filter == EVFILT_WRITE) { // 이벤트가 쓰기 이벤트인지 확인
 				if (containsCurrentEvent(cur.ident)) { // 현재 이벤트가 처리 목록에 있는지 확인
 					handleWriteEvent(cur.ident); // 클라이언트에 데이터 쓰기 처리
 				}
@@ -196,7 +190,7 @@ void Server::handleReadEvent(int fd, intptr_t data, std::string host) {
 
         // 메시지 길이 제한 검사 (512 바이트)
         if (message.size() > 512) {
-            Buffer::sendMessage(fd, Error::ERR_INPUTTOOLONG(host)); // 메시지가 너무 길면 오류 메시지를 전송합니다.
+            Buffer::saveMessageToBuffer(fd, Error::ERR_INPUTTOOLONG(host)); // 메시지가 너무 길면 오류 메시지를 전송합니다.
             continue;
         }
 
@@ -254,20 +248,16 @@ void Server::addClient(int fd) {
     pushEvents(clientFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
     // 클라이언트 소켓에 대한 쓰기 이벤트를 이벤트 리스트에 추가
     pushEvents(clientFd, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, 0, NULL);
-    // 쓰기 이벤트는 한 번만 검출되고 더 이상 검출되지 않음(DISPATCH = 삭제, EV_ONESHOT = 한 번만 검출)
-    // -> 쓰기 이벤트가 필요하면 다시 추가해야 함
     
     // 클라이언트 목록에 새 클라이언트 추가
     Lists::addClientList(clientFd, clientAddr.sin_addr, this);
 
-    
     // 클라이언트 소켓의 읽기 및 쓰기 버퍼 초기화
     Buffer::resetReadBuffer(clientFd);
     Buffer::resetWriteBuffer(clientFd);
 
     // 클라이언트 소켓을 논블로킹 모드로 설정
     fcntl(clientFd, F_SETFL, O_NONBLOCK);
-
 }
 
 void Server::removeClient(int clientFd) {
@@ -298,7 +288,7 @@ void Server::executeCommand(int fd) {
 
         if (!(meLoginStatus & IS_PASS)) {
             if (commandFlag != IS_PASS)
-                Buffer::sendMessage(fd, Error::ERR_NOTREGISTERED(_host, "You have not registered (PASS)"));
+                Buffer::saveMessageToBuffer(fd, Error::ERR_NOTREGISTERED(_host, "You have not registered (PASS)"));
             else
                 Command::pass(Lists::findClient(fd), _pass, _host);
         }
@@ -306,7 +296,7 @@ void Server::executeCommand(int fd) {
             if (commandFlag == IS_PASS)
                 Command::pass(Lists::findClient(fd), _pass, _host);
             else if (commandFlag != IS_NICK)
-                Buffer::sendMessage(fd, Error::ERR_NOTREGISTERED(_host, "You have not registered (NICK)"));
+                Buffer::saveMessageToBuffer(fd, Error::ERR_NOTREGISTERED(_host, "You have not registered (NICK)"));
             else
                 Command::nick(Lists::findClient(fd), _host);
         }
@@ -316,7 +306,7 @@ void Server::executeCommand(int fd) {
             else if (commandFlag == IS_NICK)
                 Command::nick(Lists::findClient(fd), _host);
             else if (commandFlag != IS_USER)
-                Buffer::sendMessage(fd, Error::ERR_NOTREGISTERED(_host, "You have not registered (USER)"));
+                Buffer::saveMessageToBuffer(fd, Error::ERR_NOTREGISTERED(_host, "You have not registered (USER)"));
             else
                 Command::user(Lists::findClient(fd), _host, _ip, _startTime);
         }
@@ -360,9 +350,6 @@ void Server::executeCommand(int fd) {
         case IS_PRIVMSG:
             Command::privmsg(Lists::findClient(fd), _host); // PRIVMSG 명령어 처리
             break;
-        case IS_NOTICE:
-            Command::notice(Lists::findClient(fd)); // NOTICE 명령어 처리
-            break;
         case IS_QUIT:
             Command::quit(Lists::findClient(fd)); // QUIT 명령어 처리
             deleteClient(fd); // 클라이언트 삭제
@@ -371,9 +358,7 @@ void Server::executeCommand(int fd) {
         case IS_NOT_ORDER:
             // 알려지지 않은 명령어 처리
             if (Message::getMessage().size()) 
-            // 엔터 하나만 들어오면 vector 비어있어서 [0] 참조할 때 segfault나는 거 수정함
-                Buffer::sendMessage(fd, Error::ERR_UNKNOWNCOMMAND(_host, Message::getMessage()[0]));
-            // Buffer::sendMessage(fd, Error::ERR_UNKNOWNCOMMAND(_host, (Message::getMessage())[0]));
+                Buffer::saveMessageToBuffer(fd, Error::ERR_UNKNOWNCOMMAND(_host, Message::getMessage()[0]));
             break;
     };
 }

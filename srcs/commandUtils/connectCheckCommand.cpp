@@ -22,5 +22,5 @@ void Command::ping(Client& client, std::string const& serverHost) {
 }
 
 void Command::pong(Client& client, std::string const& serverHost, std::string const& token) {
-    Buffer::sendMessage(client.getClientFd(), ":" + serverHost + " PONG " + serverHost + " :" + token + "\r\n");
+    Buffer::saveMessageToBuffer(client.getClientFd(), ":" + serverHost + " PONG " + serverHost + " :" + token + "\r\n");
 }
