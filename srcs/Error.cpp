@@ -41,21 +41,15 @@ std::string const Error::ERR_NOTREGISTERED(std::string const& serverHost, std::s
 }
 
 std::string const Error::ERR_UNKNOWNCOMMAND(std::string const& serverHost, std::string const& command) {
-	std::cout << "ERR_UNKNOWNCOMMAND" << std::endl;
-	std::string msg = ":";
-	std::cout << "msg added" << std::endl;
-	msg += serverHost;
-	std::cout << "serverHost added" << std::endl;
-	msg += " 421 ";
-	std::cout << "421 added" << std::endl;
-	msg += command;
-	std::cout << "command added" << std::endl;
-	msg += " :Unknown command";
-	std::cout << "Unknown command added" << std::endl;
-	msg += suffix;
-	std::cout << "suffix added" << std::endl;
-	return msg;
-	// return ":" + serverHost + " 421 " + command + " :Unknown command" + suffix;
+	// std::string msg = ":";
+	// msg += serverHost;
+	// msg += " 421 ";
+	// msg += command;
+	// msg += " :Unknown command";
+	// msg += suffix;
+	// return msg;
+	// nc-PASS NICK USER 후 엔터 입력시 segfault나는 부분 수정.
+	return ":" + serverHost + " 421 " + command + " :Unknown command" + suffix;
 }
 
 std::string const Error::ERR_NOORIGIN(std::string const& serverHost, std::string const& nick) {

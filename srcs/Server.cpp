@@ -522,7 +522,10 @@ void Server::executeCommand(int fd) {
             break;
         case IS_NOT_ORDER:
             // 알려지지 않은 명령어 처리
-            Buffer::sendMessage(fd, Error::ERR_UNKNOWNCOMMAND(_host, (Message::getMessage())[0]));
+            if (Message::getMessage().size()) 
+            // 엔터 하나만 들어오면 vector 비어있어서 [0] 참조할 때 segfault나는 거 수정함
+                Buffer::sendMessage(fd, Error::ERR_UNKNOWNCOMMAND(_host, Message::getMessage()[0]));
+            // Buffer::sendMessage(fd, Error::ERR_UNKNOWNCOMMAND(_host, (Message::getMessage())[0]));
             break;
     };
 }
