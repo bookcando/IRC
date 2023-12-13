@@ -8,17 +8,7 @@
 #include "../../includes/Client.hpp"
 #include "../../includes/Channel.hpp"
 
-// 채널 이름이 유효한 형식인지 확인하는 함수
 static bool isChanName(std::string const& chanName) {
-    // 채널 이름이 2자 이상이고 '#'으로 시작하는 경우에만 true를 반환합니다.
-
-// 1.3 Channels
-//    Channels names are strings (beginning with a '&' or '#' character) of
-//    length up to 200 characters.  Apart from the the requirement that the
-//    first character being either '&' or '#'; the only restriction on a
-//    channel name is that it may not contain any spaces (' '), a control G
-//    (^G or ASCII 7), or a comma (',' which is used as a list item
-//    separator by the protocol).    
 
     if (chanName.find(',') != std::string::npos)
         return false;
