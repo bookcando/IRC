@@ -23,16 +23,6 @@ std::string const Error::ERR_NONICKNAMEGIVEN(std::string const& serverHost) {
 }
 
 std::string const Error::ERR_NICKNAMEINUSE(std::string const& serverHost, std::string const& nick) {
-	// return ":" + serverHost + " 433 " + nick + " :Nickname is already in use" + suffix;
-
-
-	// return ":" + serverHost + " 433 " + nick + " :Nickname is already in use" + suffix;
-	// 18:07 -!- Nick Nickname is already in use is already in use
-	// return ":" + serverHost + " 433 " + nick + ":Nickname" + nick + "is already in use" + suffix;
-	// 18:09 -!- Nick already is already in use
-	// return ":" + serverHost + " 433 " + nick + ":Nickname" + nick + " is already in use" + suffix;
-	// 18:10 -!- Nick is is already in use
-	// return ":" + serverHost + " 433 " + nick + " :Nickname " + nick + "is already in use" + suffix;
 	return ":" + serverHost + " 433 " + "Nick " + nick + " is already in use" + suffix;
 }
 
@@ -45,14 +35,6 @@ std::string const Error::ERR_NOTREGISTERED(std::string const& serverHost, std::s
 }
 
 std::string const Error::ERR_UNKNOWNCOMMAND(std::string const& serverHost, std::string const& command) {
-	// std::string msg = ":";
-	// msg += serverHost;
-	// msg += " 421 ";
-	// msg += command;
-	// msg += " :Unknown command";
-	// msg += suffix;
-	// return msg;
-	// nc-PASS NICK USER 후 엔터 입력시 segfault나는 부분 수정.
 	return ":" + serverHost + " 421 " + command + " :Unknown command" + suffix;
 }
 

@@ -26,9 +26,7 @@ namespace Command {
 	void kick(Client& client, std::string const& serverHost);
 	void topic(Client& client, std::string const& serverHost);
 	void invite(Client& client, std::string const& serverHost);
-	
-	bool oper(Client& client, std::string const& opName, std::string const& opPass, std::string const& serverHost, bool oper);
-	int kill(Client& client, std::string const& serverHost, bool op);
+
 }
 
 #endif

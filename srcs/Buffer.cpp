@@ -94,43 +94,22 @@ int Buffer::sendMessage(int fd) {
     std::string message = _bufferForWrite[fd];
     byte = send(fd, message.c_str(), message.length(), 0);
     if (byte == -1) {
-        std::cout << "++++++++++++++++++send error+++++++++++++++++++++" << std::endl;
-        // Server::pushEvents(nullptr, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, 0, NULL);
-        // Lists::findClient(fd).getServerPtr()->pushevents(0, fd, EVFILT_WRITE, EV_ADD | EV d_ENABLE | EV_ONESHOT, 0, 0, NULL);
         Lists::findClient(fd).getServerPtr()->pushEvents(fd, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, 0, NULL);
-        // getServerPtr()->pushEvents(nullptr, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, 0, NULL);
-        //EVENT SETTER
         return -1;
     }
-    // ServerRun에서는 한 번 보내본다
-    // 1. 성공하면 그대로 그 부분 
-    // 보내보고 안보내지면 다시
-    // 이벤트 생성하고(WRITE_EVENT를 잡기 위함)
-    // 이벤트 등록되면 이벤트 핸들러에서 보내기
 
     if (static_cast<size_t>(byte) < message.length()) {
         _bufferForWrite[fd] = _bufferForWrite[fd].substr(byte);
-        //EVENT SETTER
         Lists::findClient(fd).getServerPtr()->pushEvents(fd, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, 0, NULL);
     }
     else
         _bufferForWrite[fd] = "";
 
-    #ifdef DEBUG
-    std::cout << "send: " << fd << " " << message;
-    #endif
     return byte;
 }
 
-//Command들에서만 사용하는 sendMessage -> 여기서 send 안하고 그냥 _bufferForWrite에 넣어두고 이벤트만 잡으려 하자고
 int Buffer::sendMessage(int fd, std::string message) {
-    // int byte = 0;
-    //EVENT SETTER
     Lists::findClient(fd).getServerPtr()->pushEvents(fd, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, 0, NULL);
     _bufferForWrite[fd] += message;
-    // #ifdef DEBUG
-    // std::cout << "send: " << fd << " " << message;
-    // #endif
     return 0;
-    // return byte;
 }

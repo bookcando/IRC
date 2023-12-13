@@ -21,7 +21,6 @@ private:
 
     EventList _newEventFdList;
 
-    // int kevent(int kqueueFd, const struct kevent *changelist, int nchanges, struct kevent *eventlist, int nevents, const struct timespec *timeout);
     int _nEvents;
     struct kevent _kEventList[100];
     struct timespec _timeout;
@@ -59,22 +58,8 @@ public:
 
     void executeCommand(int fd);
 
-    // void pushEvents(EventList &eventFdList, uintptr_t fd, int16_t filter, uint16_t flags, uint32_t fflags, intptr_t data, void* udata);
     void pushEvents(uintptr_t fd, int16_t filter, uint16_t flags, uint32_t fflags, intptr_t data, void* udata);
-    // struct kevent {
-    //     uintptr_t       ident;          /*  identifier for this event */
-    //     short           filter;         /*  filter for event */
-    //     u_short         flags;          /*  general flags */
-    //     u_int           fflags;         /*  filter-specific flags */
-    //     intptr_t        data;           /*  filter-specific data */
-    //     void            *udata;         /*  opaque user data identifier */
-    // };
-    // ident : 이벤트가 발생한 파일 디스크립터
-    // filter : 이벤트를 검출할 때 사용할 필터
-    // flags : 이벤트를 검출할 때 사용할 플래그
-    // fflags : 필터에 따라 사용할 플래그
-    // data : 필터에 따라 사용할 데이터
-    // udata : 사용자 정의 데이터
+
     int getPort() const;
     std::string const& getHost() const;
 };
