@@ -426,30 +426,47 @@ void Server::executeCommand(int fd) {
             Command::ping(Lists::findClient(fd), _host);
             return ;
         }
+        if (commandFlag == IS_QUIT) {
+            Command::quit(Lists::findClient(fd));
+            deleteClient(fd);
+            return ;
+        }
 
         if (!(meLoginStatus & IS_PASS)) {
+            // 패스가 안되어있는데
             if (commandFlag != IS_PASS)
-                Buffer::sendMessage(fd, Error::ERR_NOTREGISTERED(_host, ":You have not registered PASS"));
+                Buffer::sendMessage(fd, Error::ERR_NOTREGISTERED(_host, "You have not registered (PASS)"));
+                // 패스 커맨드가 아니면 : 패스부터 해라
             else
                 Command::pass(Lists::findClient(fd), _pass, _host);
+                // 패스 커맨드이면 패스 커맨드 실행
         }
         else if (!(meLoginStatus & IS_NICK)) {
+            // 패스는 되어있고, NICK이 안되어있는데
             if (commandFlag == IS_PASS)
                 Command::pass(Lists::findClient(fd), _pass, _host);
+                // PASS 커맨드면 PASS 해라
             else if (commandFlag != IS_NICK)
-                Buffer::sendMessage(fd, Error::ERR_NOTREGISTERED(_host, ":You have not registered NICK"));
+                Buffer::sendMessage(fd, Error::ERR_NOTREGISTERED(_host, "You have not registered (NICK)"));
+                // NICK 커맨드 아니면 : NICK부터 해라
             else
                 Command::nick(Lists::findClient(fd), _host);
+                // NICK 커맨드면 nick
         }
         else if (!(meLoginStatus & IS_USER)) {
+            // PASS도 아니고, NICK도 아닌데 USER가 안되어있으면
             if (commandFlag == IS_PASS)
                 Command::pass(Lists::findClient(fd), _pass, _host);
+                // PASS 커맨드면 PASS 해라
             else if (commandFlag == IS_NICK)
                 Command::nick(Lists::findClient(fd), _host);
+                // NICK 커맨드면 NICK 해라
             else if (commandFlag != IS_USER)
-                Buffer::sendMessage(fd, Error::ERR_NOTREGISTERED(_host, ":You have not registered USER"));
+                Buffer::sendMessage(fd, Error::ERR_NOTREGISTERED(_host, "You have not registered (USER)"));
+                // USER 커맨드 아니면 : USER부터 해라
             else
                 Command::user(Lists::findClient(fd), _host, _ip, _startTime);
+                // USER 커맨드면 user!
         }
         return ;
     }

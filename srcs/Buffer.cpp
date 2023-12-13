@@ -94,6 +94,7 @@ int Buffer::sendMessage(int fd) {
     std::string message = _bufferForWrite[fd];
     byte = send(fd, message.c_str(), message.length(), 0);
     if (byte == -1) {
+        std::cout << "++++++++++++++++++send error+++++++++++++++++++++" << std::endl;
         // Server::pushEvents(nullptr, fd, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, 0, NULL);
         // Lists::findClient(fd).getServerPtr()->pushevents(0, fd, EVFILT_WRITE, EV_ADD | EV d_ENABLE | EV_ONESHOT, 0, 0, NULL);
         Lists::findClient(fd).getServerPtr()->pushEvents(fd, EVFILT_WRITE, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, 0, NULL);

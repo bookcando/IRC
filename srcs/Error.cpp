@@ -24,12 +24,16 @@ std::string const Error::ERR_NONICKNAMEGIVEN(std::string const& serverHost) {
 
 std::string const Error::ERR_NICKNAMEINUSE(std::string const& serverHost, std::string const& nick) {
 	// return ":" + serverHost + " 433 " + nick + " :Nickname is already in use" + suffix;
+
+
+	// return ":" + serverHost + " 433 " + nick + " :Nickname is already in use" + suffix;
 	// 18:07 -!- Nick Nickname is already in use is already in use
 	// return ":" + serverHost + " 433 " + nick + ":Nickname" + nick + "is already in use" + suffix;
 	// 18:09 -!- Nick already is already in use
 	// return ":" + serverHost + " 433 " + nick + ":Nickname" + nick + " is already in use" + suffix;
 	// 18:10 -!- Nick is is already in use
-	return ":" + serverHost + " 433 " + nick + " :Nickname is already in use" + suffix;
+	// return ":" + serverHost + " 433 " + nick + " :Nickname " + nick + "is already in use" + suffix;
+	return ":" + serverHost + " 433 " + "Nick " + nick + " is already in use" + suffix;
 }
 
 std::string const Error::ERR_ERRONEUSNICKNAME(std::string const& serverHost, std::string const& nick) {
