@@ -24,8 +24,9 @@ static void successNickChange(Client& client, std::string changeNick) {
 
     // 모든 클라이언트에게 닉네임 변경 사실을 알립니다.
     for (ClientMap::iterator it = clientList.begin(); it != clientList.end(); it++) {
-        if (it->second != &client) // 변경한 클라이언트 자신을 제외한 모든 클라이언트에게 메시지를 전송합니다.
-            Buffer::sendMessage(it->second->getClientFd(), reply::RPL_SUCCESSNICK(client.getNickname(), client.getUsername(), client.getHost(), changeNick));
+        // if (it->second != &client) // 변경한 클라이언트 자신을 제외한 모든 클라이언트에게 메시지를 전송합니다.
+        Buffer::sendMessage(it->second->getClientFd(), reply::RPL_SUCCESSNICK(client.getNickname(), client.getUsername(), client.getHost(), changeNick));
+        // fix : 이거 본인도 notification 받아야 정상적으로 동작함. IRSSI에서 알아서 처리해주지 않는 듯.
     }
 }
 
@@ -58,6 +59,15 @@ void Command::nick(Client& client, std::string const& serverHost) {
     messageVector const& message = Message::getMessage();
 
     // NICK 명령어에 대한 유효성 검사 및 처리를 수행합니다.
+    #ifdef DEBUG
+    std::cout << "NICK ITERATOR" << std::endl;
+    unsigned int i = 0;
+    while (i < message.size()) {
+        std::cout << message[i] << std::endl;
+        ++i;
+    }
+    #endif
+    // std::cout << "NICK: " << message[1] << std::endl;
     if (message.size() != 2)
         Buffer::sendMessage(client.getClientFd(), Error::ERR_NONICKNAMEGIVEN(serverHost));
     else if (duplicate_nick(message[1]))

@@ -2,12 +2,13 @@
 #include "../includes/utils/Containers.hpp"
 #include "../includes/Client.hpp"
 #include "../includes/Channel.hpp"
+#include "../includes/Server.hpp"
 
 // Client 클래스의 생성자
-Client::Client(int clientFd, in_addr info)
+Client::Client(int clientFd, in_addr info, Server* server)
 : _passConnect(0), _operator(false), _finalTime(time(NULL)), 
   _clientFd(clientFd), _info(info), _host(inet_ntoa(info)), 
-  _nickname(""), _realname(""), _server("") {
+  _nickname(""), _realname(""), _server(""), _serverPtr(server) {
     // 클라이언트 객체 생성 시 기본값으로 초기화
 }
 
@@ -144,4 +145,11 @@ time_t const& Client::getTime() const {
 // 클라이언트의 IP 주소 정보 반환
 in_addr const& Client::getAddr() const {
     return _info;
+}
+
+void Client::setServerPtr(Server* server) {
+    _serverPtr = server;
+}
+Server* Client::getServerPtr() const {
+    return _serverPtr;
 }

@@ -1,7 +1,7 @@
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98
 DEBUGFLAGS = -g3 -fsanitize=address -fsanitize=undefined -fstack-protector-all -D DEBUG
-TARGET = IRC
+TARGET = ircserv
 SRCDIR = .
 UTILDIR = ./commandUtils
 OBJDIR = obj

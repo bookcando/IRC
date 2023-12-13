@@ -11,6 +11,22 @@
 // 채널 이름이 유효한 형식인지 확인하는 함수
 static bool isChanName(std::string const& chanName) {
     // 채널 이름이 2자 이상이고 '#'으로 시작하는 경우에만 true를 반환합니다.
+
+// 1.3 Channels
+//    Channels names are strings (beginning with a '&' or '#' character) of
+//    length up to 200 characters.  Apart from the the requirement that the
+//    first character being either '&' or '#'; the only restriction on a
+//    channel name is that it may not contain any spaces (' '), a control G
+//    (^G or ASCII 7), or a comma (',' which is used as a list item
+//    separator by the protocol).    
+
+    if (chanName.find(',') != std::string::npos)
+        return false;
+    if (chanName.find(' ') != std::string::npos)
+        return false;
+    if (chanName.find(7) != std::string::npos)
+        return false;
+    // Channel 이름에 들어가면 안 되는 문자 실패로 제거
     if (chanName.size() < 2)
         return false;
     if (chanName[0] == '#')
@@ -240,8 +256,15 @@ void Command::topic(Client& client, std::string const& serverHost) {
     }
     else { // 메시지가 3개인 경우 (채널 토픽 설정)
         chan = &Lists::findChannel(message[1]); // 채널을 찾습니다.
+
         if ((chan->getMode() & SAFE_TOPIC) && (chan->getChannelOperator() == NULL || chan->getChannelOperator()->getClientFd() != client.getClientFd()))
             Buffer::sendMessage(client.getClientFd(), Error::ERR_CHANOPRIVSNEEDED(serverHost, client.getNickname(), message[1])); // 토픽 설정 권한이 있는지 확인
+
+        // 채널에 가입되어 있는지 확인
+        // 채널에 가입되어 있지 않으면 ERROR : NOT ON CHANNEL;
+        else if (chan->getUserList().find(client.getClientFd()) == chan->getUserList().end())
+            Buffer::sendMessage(client.getClientFd(), Error::ERR_NOTONCHANNEL(serverHost, client.getNickname(), message[1]));
+
         else {
             userList = chan->getUserList(); // 채널의 사용자 목록을 가져옵니다.
             chan->setTopic(message[2]); // 토픽을 설정합니다.
