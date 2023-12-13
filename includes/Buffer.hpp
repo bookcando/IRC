@@ -4,6 +4,7 @@
 #include "./utils/Headers.hpp"
 #include "./utils/Containers.hpp"
 
+
 class Buffer {
 private:
     static BufferMap _bufferForRead;
