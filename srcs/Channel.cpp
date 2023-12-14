@@ -88,6 +88,8 @@ void Channel::addClientList(Client* client) {
 // 채널의 사용자 리스트에서 클라이언트 제거
 void Channel::deleteClientList(Client* client) {
     if (_userList.find(client->getClientFd()) != _userList.end()) {
+        if (_channelOperator && _channelOperator->getClientFd() == client->getClientFd())
+            _channelOperator = NULL; // 클라이언트가 채널 운영자인 경우, 운영자를 NULL로 설정합니다.
         _userList.erase(client->getClientFd()); // 클라이언트를 사용자 리스트에서 제거합니다.
     }
 }

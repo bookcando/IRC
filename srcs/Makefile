@@ -1,6 +1,6 @@
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98
-DEBUGFLAGS = -g
+DEBUGFLAGS = -g -fsanitize=address
 TARGET = ircserv
 SRCDIR = .
 UTILDIR = ./commandUtils

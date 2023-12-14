@@ -78,6 +78,7 @@ void Server::initializeServer() {
     // 서버 소켓 논블로킹 모드로 설정: 
     fcntl(_socketFd, F_SETFL, O_NONBLOCK);
 
+    // 서버 소켓에 대한 읽기 이벤트를 이벤트 리스트에 추가
     pushEvents(_socketFd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
 
     // 서버 가동 플래그 설정
@@ -86,9 +87,9 @@ void Server::initializeServer() {
     // 서버 시작 시간 설정
     _startTime = time(NULL);
 
-    // --- 임시 타임아웃 설정 (추후 삭제) ---
-    _timeout.tv_sec = 0;
-    _timeout.tv_nsec = 500000000;
+    // 타임아웃 설정
+    _timeout.tv_sec = 1;
+    _timeout.tv_nsec = 0;
 }
 
 void Server::runServer() {
