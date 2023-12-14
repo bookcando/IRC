@@ -69,6 +69,8 @@ void Command::join(Client& client, std::string const& serverHost) {
                 if (Lists::findChannel(chanStr).getUserList().size() == 0) {
                     Lists::deleteChannelList(chanStr);
                     Lists::addChannelList(chanStr, &client);
+                    if (channel->getChannelOperator() == NULL)
+                        channel->setChannelOperator(&client);
                 }
             }
             // 채널 객체를 가져와서 클라이언트의 가입 요청을 처리합니다.
@@ -143,6 +145,8 @@ void Command::part(Client& client, std::string const& serverHost) {
                     else
                         Buffer::saveMessageToBuffer(it->second->getClientFd(), reply::RPL_SUCCESSPART(client.getNickname(), client.getUsername(), client.getHost(), chan->getChannelName()));
                 }
+                if (chan->getChannelOperator() != NULL && chan->getChannelOperator()->getClientFd() == client.getClientFd())
+                    chan->setChannelOperator(NULL);
                 chan->deleteClientList(&client);
                 client.deleteJoinList(chan);
                 // 채널에 아무도 남지 않은 경우 채널을 제거합니다.
