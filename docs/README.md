@@ -92,4 +92,15 @@ https://github.com/bluedog129/IRC/assets/50707297/372bd868-4e4c-42a8-aa78-1dfbe6
 
 </details>
 
+<details>
+  <summary>mode +o 명령어</summary>
+  - /mode: IRC에서 채널이나 사용자의 모드를 설정하거나 조회하는 데 사용되는 명령어입니다. </br>
+  - +o: 이는 "operator flag"를 설정하는 것으로, 대상 사용자에게 오퍼레이터 권한을 부여합니다. 오퍼레이터는 채널에서 사용자를 추방하거나, 채널 모드를 변경하는 등의 관리 작업을 수행할 수 있습니다. </br>
+  - 사용자이름: 오퍼레이터 권한을 부여하고자 하는 사용자의 닉네임입니다. </br>
+  
+
+https://github.com/bluedog129/IRC/assets/50707297/5feadb1f-5f43-4740-a903-6fd8b567a4b6
+
+
+</details>
 
