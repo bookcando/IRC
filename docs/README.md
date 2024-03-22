@@ -54,7 +54,7 @@ https://github.com/bluedog129/IRC/assets/50707297/30dfbdcc-93de-4241-b818-635476
 
 
 </details>
-https://github.com/bluedog129/IRC/assets/50707297/5bb52781-510a-4838-b79a-6c3ba6c50c2f
+
 
 ### irssi 프로그램을 실행하여 클라이언트로서 접속을 시도합니다.
 1. 새로운 터미널에 irssi 명령어를 실행합니다.
