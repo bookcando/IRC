@@ -104,3 +104,16 @@ https://github.com/bluedog129/IRC/assets/50707297/5feadb1f-5f43-4740-a903-6fd8b5
 
 </details>
 
+</details>
+
+<details>
+  <summary>mode +i, invite 명령어</summary>
+  - /mode +i 명령어는 채널에 "초대 전용(invite-only)" 모드를 설정합니다. 이 모드가 설정되면, 채널에 들어올 수 있는 사람들을 제한하여 오직 초대받은 사용자만이 채널에 접근할 수 있게 됩니다. 이는 특정 주제에 대해 논의하거나, 특정 그룹의 멤버만을 위한 공간을 만들고자 할 때 유용합니다.
+
+  - /invite 명령어는 특정 사용자를 현재의 채널로 초대하는 데 사용됩니다. 채널이 초대 전용 모드일 때 더욱 유용하며, 이 경우 초대받은 사용자만이 채널에 입장할 수 있습니다.
+  
+
+https://github.com/bluedog129/IRC/assets/50707297/5016fc36-fbdd-4daf-9dae-8ee176567b80
+
+
+</details>
