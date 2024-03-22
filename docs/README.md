@@ -117,3 +117,15 @@ https://github.com/bluedog129/IRC/assets/50707297/5016fc36-fbdd-4daf-9dae-8ee176
 
 
 </details>
+
+<details>
+  - /mode #채널이름 +k 비밀번호 </br>
+  - mode +k는 해당 채널에 비밀번호를 적용하는 명령어
+  <summary>mode +k 명령어</summary>
+  
+
+https://github.com/bluedog129/IRC/assets/50707297/a2585918-d7fa-4017-a4ad-8f392eeb0289
+
+
+</details>
+
