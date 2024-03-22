@@ -72,6 +72,8 @@ https://github.com/bluedog129/IRC/assets/50707297/c67810b8-21b3-4e5f-ab81-3045b8
 </br></br>
 
 ### 실행 예시
+실행되는 모습은 아래 영상을 통해 확인할 수 있습니다:
+
 <details>
   <summary>join 명령어</summary>
   
@@ -81,6 +83,13 @@ https://github.com/bluedog129/IRC/assets/50707297/bfe47e6b-3095-4394-8d88-f9e108
 
 </details>
 
+<details>
+  <summary>part 명령어</summary>
+  
 
-실행되는 서버의 모습은 아래 이미지를 통해 확인할 수 있습니다:
+https://github.com/bluedog129/IRC/assets/50707297/372bd868-4e4c-42a8-aa78-1dfbe6b4dfc8
+
+
+</details>
+
 
