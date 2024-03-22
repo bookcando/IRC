@@ -63,8 +63,15 @@ https://github.com/bluedog129/IRC/assets/50707297/ae5e5b56-47c5-41a4-98f4-d09b98
 </br></br>
 
 ### 실행 예시
+<details>
+  <summary>join 명령어</summary>
+  
+
+https://github.com/bluedog129/IRC/assets/50707297/bfe47e6b-3095-4394-8d88-f9e108579cf1
+
+
+</details>
+
 
 실행되는 서버의 모습은 아래 이미지를 통해 확인할 수 있습니다:
 
-![실행 예시 이미지 1](image_link_1.jpg)
-![실행 예시 이미지 2](image_link_2.jpg)
