@@ -32,8 +32,8 @@
  
 ## 과제 세부 내용
 
-과제에 대한 세부 정보는 다음 노션 링크를 통해 확인할 수 있습니다: </br>
-[노션 링크](https://witty-crime-33b.notion.site/IRC-44efc8148af847db829a2ed64d4afef8?pvs=4)
+과제에 대한 세부 정보는 다음 블로그를 통해 확인할 수 있습니다 </br>
+[블로그 링크]([https://witty-crime-33b.notion.site/IRC-44efc8148af847db829a2ed64d4afef8?pvs=4](https://blog.naver.com/PostView.naver?blogId=bluedog129&logNo=223391916179&categoryNo=60&parentCategoryNo=0&viewDate=&currentPage=2&postListTopCurrentPage=&from=postList&userTopListOpen=true&userTopListCount=5&userTopListManageOpen=false&userTopListCurrentPage=2))
 
 </br></br>
 
